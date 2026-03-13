@@ -1,0 +1,155 @@
+// Microsoft Visual C++ generated resource script.
+//
+#pragma code_page(65001)
+
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "winres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// Neutral (Default) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEUD)
+LANGUAGE LANG_NEUTRAL, SUBLANG_DEFAULT
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""winres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_MAIN_ICON           ICON                    "..\\Assets\\ClawSandbox.ico"
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE
+BEGIN
+    IDS_START_SANDBOX       "Start Sandbox"
+    IDS_STOP_SANDBOX        "Stop Sandbox"
+    IDS_STARTING_SANDBOX    "Starting Sandbox..."
+    IDS_STOPPING_SANDBOX    "Stopping Sandbox..."
+    IDS_DELETING_SERVICE    "Deleting Service..."
+    IDS_SERVICE_MISSING     "Service Missing"
+    IDS_SERVICE_UNAVAILABLE "Service Unavailable"
+    IDS_WARNING_TEXT        "After the sandbox starts, newly launched OpenClaw can only modify\r\nits related directories, such as paths containing ""openclaw"".\r\nFor personal learning and technical communication only. Do not use it for other purposes."
+    IDS_PROJECT_TEXT        "Website: <a href=""https://knsoft.org/ClawSandbox/"">https://knsoft.org/ClawSandbox/</a>\r\nGitHub: <a href=""https://github.com/KNSoft/ClawSandbox"">https://github.com/KNSoft/ClawSandbox</a>"
+    IDS_IMAGE_LOAD_FAILURE  "Embedded icon image could not be loaded."
+    IDS_ACTION_START        "Start"
+    IDS_ACTION_STOP         "Stop"
+    IDS_ACTION_PRIVILEGE_SETUP "Privilege setup"
+    IDS_ACTION_STARTUP_INSTALL "Startup install"
+    IDS_ACTION_EXIT_CLEANUP "Exit cleanup"
+    IDS_TITLE_STARTED_SUFFIX " (Started)"
+END
+
+STRINGTABLE
+BEGIN
+    IDS_TITLE_STOPPED_SUFFIX " (Stopped)"
+    IDS_GDIPLUS_INIT_FAILED "GDI+ initialization failed."
+    IDS_WINDOW_REG_FAILED   "Window registration failed."
+    IDS_WINDOW_CREATE_FAILED "Window creation failed."
+    IDS_ACTION_FAILED_FORMAT "%s failed.\n\n%s"
+    IDS_DEFAULT_OPERATION   "Operation"
+    IDS_UNKNOWN_ERROR       "Unknown error."
+END
+
+#endif    // Neutral (Default) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// Chinese (Simplified, China) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_CHS)
+LANGUAGE LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE
+BEGIN
+    IDS_START_SANDBOX       "启动沙箱"
+    IDS_STOP_SANDBOX        "停止沙箱"
+    IDS_STARTING_SANDBOX    "正在启动沙箱..."
+    IDS_STOPPING_SANDBOX    "正在停止沙箱..."
+    IDS_DELETING_SERVICE    "正在删除服务..."
+    IDS_SERVICE_MISSING     "服务缺失"
+    IDS_SERVICE_UNAVAILABLE "服务不可用"
+    IDS_WARNING_TEXT        "沙箱启动后，新运行的 OpenClaw 将只能修改\r\n其相关目录（如路径包含 ""openclaw""）。\r\n仅供个人学习与技术交流使用，请勿用于其它用途。"
+    IDS_PROJECT_TEXT        "网站：<a href=""https://knsoft.org/ClawSandbox/"">https://knsoft.org/ClawSandbox/</a>\r\nGitHub：<a href=""https://github.com/KNSoft/ClawSandbox"">https://github.com/KNSoft/ClawSandbox</a>"
+    IDS_IMAGE_LOAD_FAILURE  "无法加载内置图标图像。"
+    IDS_ACTION_START        "启动"
+    IDS_ACTION_STOP         "停止"
+    IDS_ACTION_PRIVILEGE_SETUP "权限初始化"
+    IDS_ACTION_STARTUP_INSTALL "启动安装"
+    IDS_ACTION_EXIT_CLEANUP "退出清理"
+    IDS_TITLE_STARTED_SUFFIX "（已启动）"
+END
+
+STRINGTABLE
+BEGIN
+    IDS_TITLE_STOPPED_SUFFIX "（未启动）"
+    IDS_GDIPLUS_INIT_FAILED "GDI+ 初始化失败。"
+    IDS_WINDOW_REG_FAILED   "窗口类注册失败。"
+    IDS_WINDOW_CREATE_FAILED "窗口创建失败。"
+    IDS_ACTION_FAILED_FORMAT "%s失败。\n\n%s"
+    IDS_DEFAULT_OPERATION   "操作"
+    IDS_UNKNOWN_ERROR       "未知错误。"
+END
+
+#endif    // Chinese (Simplified, China) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

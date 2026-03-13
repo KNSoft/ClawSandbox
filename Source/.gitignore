@@ -1,0 +1,8 @@
+.vs
+*.user
+*.aps
+
+/OutDir
+IntDir
+
+x64
