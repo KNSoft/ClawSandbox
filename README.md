@@ -1,4 +1,11 @@
-﻿# ClawSandbox
+﻿| **English (en-US)** | [简体中文 (zh-CN)](https://github.com/KNSoft/ClawSandbox/blob/main/README.zh-CN.md) |
+| --- | --- |
+
+&nbsp;
+
+# ClawSandbox
+
+![PR Welcome](https://img.shields.io/badge/PR-welcome-0688CB.svg) [![GitHub License](https://img.shields.io/github/license/KNSoft/KNSoft.SlimDetours)](https://github.com/KNSoft/KNSoft.SlimDetours/blob/main/LICENSE)
 
 ![ClawSandbox](./Source/Assets/ClawSandbox.ico)
 
@@ -23,6 +30,8 @@ Official site: https://knsoft.org/ClawSandbox/
 
 **Make sure OpenClaw is started only after ClawSandbox is already running.**
 
-**Released builds are provided for personal learning only. Because they do not have a trusted EV signature, they may be blocked by security software. If you can provide one, please let us know.**
+## License
+
+**Released builds are provided for personal learning and technical communication only. Because they do not have a trusted EV signature, they may be blocked by security software. If you can provide one, please let us know.**
 
 **For any other use, you should build and publish it yourself. This project is licensed under the MIT License.**

@@ -1,4 +1,11 @@
+| [English (en-US)](https://github.com/KNSoft/ClawSandbox/blob/main/README.md) | **简体中文 (zh-CN)** |
+| --- | --- |
+
+&nbsp;
+
 # ClawSandbox
+
+![PR Welcome](https://img.shields.io/badge/PR-welcome-0688CB.svg) [![GitHub License](https://img.shields.io/github/license/KNSoft/KNSoft.SlimDetours)](https://github.com/KNSoft/KNSoft.SlimDetours/blob/main/LICENSE)
 
 ![ClawSandbox](./Source/Assets/ClawSandbox.ico)
 
@@ -23,5 +30,8 @@ ClawSandbox 是一个**内核级安全沙箱**，防止 OpenClaw 意外地破坏
 
 **务必在 ClawSandbox 运行后再运行 OpenClaw**
 
-**发布的版本仅供个人学习使用，由于没有受信任的EV签名，可能被安防软件拦截。如果你可以提供，请让我们知道**
+## 协议
+
+**发布的版本仅供个人学习与技术交流使用，由于没有受信任的EV签名，可能被安防软件拦截。如果你可以提供，请让我们知道**
+
 **如需用于其它用途，应自行编译和发布，本项目按MIT开源协议许可**
