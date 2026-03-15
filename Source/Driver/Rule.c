@@ -14,8 +14,8 @@ static EX_PUSH_LOCK TrackedProcessLock;
 static LIST_ENTRY TrackedProcessList;
 
 static CONST UNICODE_STRING ProcessName = RTL_CONSTANT_STRING(L"node.exe");
-static CONST UNICODE_STRING CmdPart1A = RTL_CONSTANT_STRING(L"\\node_modules\\openclaw\\openclaw.mjs");
-static CONST UNICODE_STRING CmdPart1B = RTL_CONSTANT_STRING(L"\\node_modules\\openclaw\\dist\\index.js");
+static CONST UNICODE_STRING CmdPart1A = RTL_CONSTANT_STRING(L"\\openclaw\\openclaw.mjs");
+static CONST UNICODE_STRING CmdPart1B = RTL_CONSTANT_STRING(L"\\openclaw\\dist\\index.js");
 static CONST UNICODE_STRING CmdPart2 = RTL_CONSTANT_STRING(L" gateway");
 
 BOOLEAN
