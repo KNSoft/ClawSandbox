@@ -35,3 +35,12 @@ ClawSandbox 是一个**内核级安全沙箱**，防止 OpenClaw 意外地破坏
 **发布的版本仅供个人学习与技术交流使用，由于没有受信任的EV签名，可能被安防软件拦截。如果你可以提供，请让我们知道**
 
 **如需用于其它用途，应自行编译和发布，本项目按MIT开源协议许可**
+
+## 演示
+
+沙箱启动后，OpenClaw已无法删除工作目录外的文件 (D:\1.txt)：
+![Demo](./Assets/ClawSandbox.Demo.1.png)
+
+## 海报与官方群聊
+
+![Poster](./Assets/Poster.zh-CN.png)

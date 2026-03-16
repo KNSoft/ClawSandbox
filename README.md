@@ -35,3 +35,12 @@ Official site: https://knsoft.org/ClawSandbox/
 **Released builds are provided for personal learning and technical communication only. Because they do not have a trusted EV signature, they may be blocked by security software. If you can provide one, please let us know.**
 
 **For any other use, you should build and publish it yourself. This project is licensed under the MIT License.**
+
+## Demo
+
+After the sandbox starts, OpenClaw can no longer delete files outside the working directory (D:\1.txt):
+![Demo](./Assets/ClawSandbox.Demo.1.png)
+
+## Poster and official group chat
+
+![Poster](./Assets/Poster.png)
