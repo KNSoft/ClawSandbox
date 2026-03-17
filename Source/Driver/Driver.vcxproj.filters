@@ -7,6 +7,7 @@
     <ClCompile Include="Main.c" />
     <ClCompile Include="Rule.c" />
     <ClCompile Include="Utils.c" />
+    <ClCompile Include="Rule.List.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Driver.h" />

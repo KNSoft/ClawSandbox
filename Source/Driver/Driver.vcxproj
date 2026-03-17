@@ -112,6 +112,7 @@
   <ItemGroup>
     <ClCompile Include="Main.c" />
     <ClCompile Include="Rule.c" />
+    <ClCompile Include="Rule.List.c" />
     <ClCompile Include="Utils.c" />
   </ItemGroup>
   <ItemGroup>

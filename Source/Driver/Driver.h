@@ -56,3 +56,13 @@ RuleIsAllowWrite(
     _In_ PCFLT_RELATED_OBJECTS FltObjects,
     _In_ FILE_INFORMATION_CLASS FileInformationClass);
 
+/* Rule.List.c */
+
+BOOLEAN
+RuleListShouldTrackCreate(
+    _In_ PPS_CREATE_NOTIFY_INFO CreateInfo);
+
+BOOLEAN
+RuleListIsAllowWritePath(
+    _In_ PCUNICODE_STRING Path,
+    _In_ PCFLT_RELATED_OBJECTS FltObjects);

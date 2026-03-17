@@ -1,7 +1,5 @@
 ﻿#include "Driver.h"
 
-static PFLT_VOLUME FltSystemVolume;
-
 #pragma region Process track
 
 typedef struct _TRACKED_PROCESS_ENTRY
@@ -13,11 +11,6 @@ typedef struct _TRACKED_PROCESS_ENTRY
 static EX_PUSH_LOCK TrackedProcessLock;
 static LIST_ENTRY TrackedProcessList;
 
-static CONST UNICODE_STRING ProcessName = RTL_CONSTANT_STRING(L"node.exe");
-static CONST UNICODE_STRING CmdPart1A = RTL_CONSTANT_STRING(L"\\openclaw\\openclaw.mjs");
-static CONST UNICODE_STRING CmdPart1B = RTL_CONSTANT_STRING(L"\\openclaw\\dist\\index.js");
-static CONST UNICODE_STRING CmdPart2 = RTL_CONSTANT_STRING(L" gateway");
-
 BOOLEAN
 RuleShouldTrackCreate(
     _In_ PPS_CREATE_NOTIFY_INFO CreateInfo)
@@ -26,26 +19,12 @@ RuleShouldTrackCreate(
     {
         return FALSE;
     }
-
-    if (!PathEndsWithComponentInsensitive(CreateInfo->ImageFileName, &ProcessName))
-    {
-        return FALSE;
-    }
-
-    if ((!StringContainsInSensetive(CreateInfo->CommandLine, &CmdPart1A) &&
-         !StringContainsInSensetive(CreateInfo->CommandLine, &CmdPart1B)) ||
-        !StringContainsInSensetive(CreateInfo->CommandLine, &CmdPart2))
-    {
-        return FALSE;
-    }
-
-    return TRUE;
+    return RuleListShouldTrackCreate(CreateInfo);
 }
 
 BOOLEAN
 RuleIsTrackedProcess(
-    _In_ HANDLE ProcessId
-)
+    _In_ HANDLE ProcessId)
 {
     PLIST_ENTRY Link;
     BOOLEAN Tracked;
@@ -378,6 +357,8 @@ RuleInitSystemVolume(
     return Status;
 }
 
+static PFLT_VOLUME FltSystemVolume;
+
 NTSTATUS
 RuleInitialize(
     _In_ PFLT_FILTER Filter,
@@ -457,7 +438,6 @@ GetOperationName(
     }
 }
 
-static CONST UNICODE_STRING OpenClawPart = RTL_CONSTANT_STRING(L"openclaw");
 static CONST UNICODE_STRING TempDirPart = RTL_CONSTANT_STRING(L"Temp");
 static CONST UNICODE_STRING TmpDirPart = RTL_CONSTANT_STRING(L"tmp");
 static CONST UNICODE_STRING WindowsCachesPathPart = RTL_CONSTANT_STRING(L"\\AppData\\Local\\Microsoft\\Windows\\Caches\\");
@@ -468,7 +448,7 @@ RuleIsAllowWritePath(
     _In_ PCUNICODE_STRING Path,
     _In_ PCFLT_RELATED_OBJECTS FltObjects)
 {
-    if (StringContainsInSensetive(Path, &OpenClawPart))
+    if (RuleListIsAllowWritePath(Path, FltObjects))
     {
         return TRUE;
     }
