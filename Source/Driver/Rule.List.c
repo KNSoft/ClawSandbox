@@ -1,26 +1,5 @@
 ﻿#include "Driver.h"
 
-/*
- * Return TRUE to track.
- * The process will be tracked if any callback returns TRUE.
- */
-_Function_class_(FN_PROCESS_TRACK_CALLBACK)
-typedef
-BOOLEAN
-FN_PROCESS_TRACK_CALLBACK(
-    _In_ PPS_CREATE_NOTIFY_INFO CreateInfo);
-
-/*
- * Return TRUE to allow write.
- * The file write operation will be allowed if any callback returns TRUE.
- */
-_Function_class_(FN_FILE_WRITE_CALLBACK)
-typedef
-BOOLEAN
-FN_FILE_WRITE_CALLBACK(
-    _In_ PCUNICODE_STRING Path,
-    _In_ PCFLT_RELATED_OBJECTS FltObjects);
-
 /* OpenClaw */
 
 static CONST UNICODE_STRING OpenClawProcessName = RTL_CONSTANT_STRING(L"node.exe");
@@ -114,43 +93,30 @@ IsEasyClawAllowWritePath(
 
 /* The whole list */
 
-static FN_PROCESS_TRACK_CALLBACK* g_apfnProcessTrackCallbacks[] = {
-    &IsOpenClawProcess,
-    &IsLobsterAIProcess,
-    &IsEasyClawProcess,
+static RULE_CLAW_TYPE g_aClawTypes[] = {
+    { L"OpenClaw", &IsOpenClawProcess, &IsOpenClawAllowWritePath },
+    { L"LobsterAI", &IsLobsterAIProcess, &IsLobsterAIAllowWritePath },
+    { L"EasyClaw", &IsEasyClawProcess, &IsEasyClawAllowWritePath },
 };
 
-static FN_FILE_WRITE_CALLBACK* g_apfnFileWriteCallbacks[] = {
-    &IsOpenClawAllowWritePath,
-    &IsLobsterAIAllowWritePath,
-    &IsEasyClawAllowWritePath,
-};
-
-BOOLEAN
-RuleListShouldTrackCreate(
+_Ret_maybenull_
+PRULE_CLAW_TYPE
+RuleListMatchClawTypeCreate(
     _In_ PPS_CREATE_NOTIFY_INFO CreateInfo)
 {
-    for (ULONG i = 0; i < ARRAYSIZE(g_apfnProcessTrackCallbacks); i++)
+    if (CreateInfo == NULL ||
+        CreateInfo->ImageFileName == NULL ||
+        CreateInfo->CommandLine == NULL)
     {
-        if (g_apfnProcessTrackCallbacks[i](CreateInfo))
-        {
-            return TRUE;
-        }
+        return NULL;
     }
-    return FALSE;
-}
 
-BOOLEAN
-RuleListIsAllowWritePath(
-    _In_ PCUNICODE_STRING Path,
-    _In_ PCFLT_RELATED_OBJECTS FltObjects)
-{
-    for (ULONG i = 0; i < ARRAYSIZE(g_apfnFileWriteCallbacks); i++)
+    for (ULONG i = 0; i < ARRAYSIZE(g_aClawTypes); i++)
     {
-        if (g_apfnFileWriteCallbacks[i](Path, FltObjects))
+        if (g_aClawTypes[i].ProcessTrackCallback(CreateInfo))
         {
-            return TRUE;
+            return &g_aClawTypes[i];
         }
     }
-    return FALSE;
+    return NULL;
 }

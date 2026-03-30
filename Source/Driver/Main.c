@@ -2,6 +2,8 @@
 
 #pragma region Access Control
 
+static CONST UNICODE_STRING EmptyImageName = RTL_CONSTANT_STRING(L"");
+
 static
 BOOLEAN
 MainCreateRequestsWriteAccess(
@@ -44,8 +46,11 @@ MainFilterFilePreOp(
     _In_ PCFLT_RELATED_OBJECTS FltObjects,
     _In_ FILE_INFORMATION_CLASS FileInformationClass)
 {
-    if (!RuleIsTrackedProcess((HANDLE)(ULONG_PTR)FltGetRequestorProcessId(Data)) ||
-        RuleIsAllowWrite(Data, FltObjects, FileInformationClass))
+    PRULE_CLAW_TYPE ClawType;
+
+    ClawType = RuleGetTrackedProcessClawType((HANDLE)(ULONG_PTR)FltGetRequestorProcessId(Data));
+    if (ClawType == NULL ||
+        RuleIsAllowWrite(ClawType, Data, FltObjects, FileInformationClass))
     {
         return FLT_PREOP_SUCCESS_NO_CALLBACK;
     }
@@ -121,6 +126,8 @@ MainProcessNotifyEx(
 
     HANDLE PPID;
     NTSTATUS Status;
+    PRULE_CLAW_TYPE ClawType;
+    PCUNICODE_STRING ImageName;
 
     /* Untrack when the process terminating */
     if (CreateInfo == NULL)
@@ -137,28 +144,38 @@ MainProcessNotifyEx(
 
     /* Bypass the process? */
     PPID = CreateInfo->ParentProcessId;
-    if (!RuleIsTrackedProcess(PPID) && !RuleShouldTrackCreate(CreateInfo))
+    ClawType = RuleGetTrackedProcessClawType(PPID);
+    if (ClawType == NULL)
+    {
+        ClawType = RuleListMatchClawTypeCreate(CreateInfo);
+    }
+    if (ClawType == NULL)
     {
         return;
     }
+    ImageName = CreateInfo->ImageFileName != NULL ?
+        CreateInfo->ImageFileName :
+        &EmptyImageName;
 
     /* Track the process */
-    Status = RuleTrackProcess(ProcessId);
+    Status = RuleTrackProcess(ProcessId, ClawType);
     if (NT_SUCCESS(Status))
     {
         LOG(DPFLTR_INFO_LEVEL,
-            "Start tracking process PID=%lu PPID=%lu ImageName=%wZ\n",
+            "Start tracking process PID=%lu PPID=%lu Claw=%ws ImageName=%wZ\n",
             (ULONG)(ULONG_PTR)ProcessId,
             (ULONG)(ULONG_PTR)PPID,
-            CreateInfo->ImageFileName);
+            ClawType->Name,
+            ImageName);
     } else
     {
         LOG(DPFLTR_INFO_LEVEL,
-            "Failed (0x%08lX) to track process PID=%lu PPID=%lu ImageName=%wZ\n",
+            "Failed (0x%08lX) to track process PID=%lu PPID=%lu Claw=%ws ImageName=%wZ\n",
             Status,
             (ULONG)(ULONG_PTR)ProcessId,
             (ULONG)(ULONG_PTR)PPID,
-            CreateInfo->ImageFileName);
+            ClawType->Name,
+            ImageName);
     }
 }
 

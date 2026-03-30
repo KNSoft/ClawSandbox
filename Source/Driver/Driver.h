@@ -24,6 +24,40 @@ PathContainsComponentInsensitive(
     _In_ PCUNICODE_STRING Path,
     _In_ PCUNICODE_STRING Component);
 
+/* Rule.List.c */
+
+/*
+ * Return TRUE to track.
+ * The process will be tracked if any callback returns TRUE.
+ */
+_Function_class_(FN_PROCESS_TRACK_CALLBACK)
+typedef
+BOOLEAN
+FN_PROCESS_TRACK_CALLBACK(
+    _In_ PPS_CREATE_NOTIFY_INFO CreateInfo);
+
+/*
+ * Return TRUE to allow write.
+ */
+_Function_class_(FN_FILE_WRITE_CALLBACK)
+typedef
+BOOLEAN
+FN_FILE_WRITE_CALLBACK(
+    _In_ PCUNICODE_STRING Path,
+    _In_ PCFLT_RELATED_OBJECTS FltObjects);
+
+typedef struct _RULE_CLAW_TYPE
+{
+    _Notnull_ PCWSTR Name;
+    _Notnull_ FN_PROCESS_TRACK_CALLBACK* ProcessTrackCallback;
+    _Notnull_ FN_FILE_WRITE_CALLBACK* FileWriteCallback;
+} RULE_CLAW_TYPE, *PRULE_CLAW_TYPE;
+
+_Ret_maybenull_
+PRULE_CLAW_TYPE
+RuleListMatchClawTypeCreate(
+    _In_ PPS_CREATE_NOTIFY_INFO CreateInfo);
+
 /* Rule.c */
 
 NTSTATUS
@@ -34,17 +68,15 @@ RuleInitialize(
 VOID
 RuleUninitialize(VOID);
 
-BOOLEAN
-RuleShouldTrackCreate(
-    _In_ PPS_CREATE_NOTIFY_INFO CreateInfo);
-
-BOOLEAN
-RuleIsTrackedProcess(
+_Ret_maybenull_
+PRULE_CLAW_TYPE
+RuleGetTrackedProcessClawType(
     _In_ HANDLE ProcessId);
 
 NTSTATUS
 RuleTrackProcess(
-    _In_ HANDLE ProcessId);
+    _In_ HANDLE ProcessId,
+    _In_ PRULE_CLAW_TYPE ClawType);
 
 BOOLEAN
 RuleUntrackProcess(
@@ -52,17 +84,7 @@ RuleUntrackProcess(
 
 BOOLEAN
 RuleIsAllowWrite(
+    _In_ PRULE_CLAW_TYPE ClawType,
     _Inout_ PFLT_CALLBACK_DATA Data,
     _In_ PCFLT_RELATED_OBJECTS FltObjects,
     _In_ FILE_INFORMATION_CLASS FileInformationClass);
-
-/* Rule.List.c */
-
-BOOLEAN
-RuleListShouldTrackCreate(
-    _In_ PPS_CREATE_NOTIFY_INFO CreateInfo);
-
-BOOLEAN
-RuleListIsAllowWritePath(
-    _In_ PCUNICODE_STRING Path,
-    _In_ PCFLT_RELATED_OBJECTS FltObjects);

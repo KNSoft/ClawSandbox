@@ -6,32 +6,19 @@ typedef struct _TRACKED_PROCESS_ENTRY
 {
     LIST_ENTRY Link;
     HANDLE ProcessId;
+    PRULE_CLAW_TYPE ClawType;
 } TRACKED_PROCESS_ENTRY, *PTRACKED_PROCESS_ENTRY;
 
 static EX_PUSH_LOCK TrackedProcessLock;
 static LIST_ENTRY TrackedProcessList;
 
-BOOLEAN
-RuleShouldTrackCreate(
-    _In_ PPS_CREATE_NOTIFY_INFO CreateInfo)
-{
-    if (CreateInfo == NULL || CreateInfo->ImageFileName == NULL || CreateInfo->CommandLine == NULL)
-    {
-        return FALSE;
-    }
-    return RuleListShouldTrackCreate(CreateInfo);
-}
-
-BOOLEAN
-RuleIsTrackedProcess(
+static
+PTRACKED_PROCESS_ENTRY
+RuleFindTrackedProcessEntryLocked(
     _In_ HANDLE ProcessId)
 {
     PLIST_ENTRY Link;
-    BOOLEAN Tracked;
 
-    Tracked = FALSE;
-
-    FltAcquirePushLockShared(&TrackedProcessLock);
     for (Link = TrackedProcessList.Flink; Link != &TrackedProcessList; Link = Link->Flink)
     {
         PTRACKED_PROCESS_ENTRY Entry;
@@ -39,21 +26,45 @@ RuleIsTrackedProcess(
         Entry = CONTAINING_RECORD(Link, TRACKED_PROCESS_ENTRY, Link);
         if (Entry->ProcessId == ProcessId)
         {
-            Tracked = TRUE;
-            break;
+            return Entry;
         }
+    }
+
+    return NULL;
+}
+
+_Ret_maybenull_
+PRULE_CLAW_TYPE
+RuleGetTrackedProcessClawType(
+    _In_ HANDLE ProcessId)
+{
+    PTRACKED_PROCESS_ENTRY Entry;
+    PRULE_CLAW_TYPE ClawType;
+
+    ClawType = NULL;
+
+    FltAcquirePushLockShared(&TrackedProcessLock);
+    Entry = RuleFindTrackedProcessEntryLocked(ProcessId);
+    if (Entry != NULL)
+    {
+        ClawType = Entry->ClawType;
     }
     FltReleasePushLock(&TrackedProcessLock);
 
-    return Tracked;
+    return ClawType;
 }
 
 NTSTATUS
 RuleTrackProcess(
-    _In_ HANDLE ProcessId)
+    _In_ HANDLE ProcessId,
+    _In_ PRULE_CLAW_TYPE ClawType)
 {
-    PLIST_ENTRY Link;
     PTRACKED_PROCESS_ENTRY Entry;
+
+    if (ClawType == NULL)
+    {
+        return STATUS_INVALID_PARAMETER;
+    }
 
     Entry = (PTRACKED_PROCESS_ENTRY)ExAllocatePool2(POOL_FLAG_NON_PAGED, sizeof(TRACKED_PROCESS_ENTRY), CLAWSANDBOX_TAG);
     if (Entry == NULL)
@@ -63,22 +74,23 @@ RuleTrackProcess(
 
     RtlZeroMemory(Entry, sizeof(*Entry));
     Entry->ProcessId = ProcessId;
+    Entry->ClawType = ClawType;
 
     FltAcquirePushLockExclusive(&TrackedProcessLock);
-    for (Link = TrackedProcessList.Flink; Link != &TrackedProcessList; Link = Link->Flink)
     {
         PTRACKED_PROCESS_ENTRY ExistingEntry;
 
-        ExistingEntry = CONTAINING_RECORD(Link, TRACKED_PROCESS_ENTRY, Link);
-        if (ExistingEntry->ProcessId == ProcessId)
+        ExistingEntry = RuleFindTrackedProcessEntryLocked(ProcessId);
+        if (ExistingEntry != NULL)
         {
+            ExistingEntry->ClawType = ClawType;
             FltReleasePushLock(&TrackedProcessLock);
             ExFreePoolWithTag(Entry, CLAWSANDBOX_TAG);
             return STATUS_SUCCESS;
         }
-    }
 
-    InsertTailList(&TrackedProcessList, &Entry->Link);
+        InsertTailList(&TrackedProcessList, &Entry->Link);
+    }
     FltReleasePushLock(&TrackedProcessLock);
 
     return STATUS_SUCCESS;
@@ -88,15 +100,12 @@ BOOLEAN
 RuleUntrackProcess(
     _In_ HANDLE ProcessId)
 {
-    PLIST_ENTRY Link;
+    PTRACKED_PROCESS_ENTRY Entry;
 
     FltAcquirePushLockExclusive(&TrackedProcessLock);
-    for (Link = TrackedProcessList.Flink; Link != &TrackedProcessList; Link = Link->Flink)
     {
-        PTRACKED_PROCESS_ENTRY Entry;
-
-        Entry = CONTAINING_RECORD(Link, TRACKED_PROCESS_ENTRY, Link);
-        if (Entry->ProcessId == ProcessId)
+        Entry = RuleFindTrackedProcessEntryLocked(ProcessId);
+        if (Entry != NULL)
         {
             RemoveEntryList(&Entry->Link);
             FltReleasePushLock(&TrackedProcessLock);
@@ -445,10 +454,11 @@ static CONST UNICODE_STRING WindowsCachesPathPart = RTL_CONSTANT_STRING(L"\\AppD
 static
 BOOLEAN
 RuleIsAllowWritePath(
+    _In_ PRULE_CLAW_TYPE ClawType,
     _In_ PCUNICODE_STRING Path,
     _In_ PCFLT_RELATED_OBJECTS FltObjects)
 {
-    if (RuleListIsAllowWritePath(Path, FltObjects))
+    if (ClawType->FileWriteCallback(Path, FltObjects))
     {
         return TRUE;
     }
@@ -522,6 +532,7 @@ RuleGetDestinationNameInformation(
 
 BOOLEAN
 RuleIsAllowWrite(
+    _In_ PRULE_CLAW_TYPE ClawType,
     _Inout_ PFLT_CALLBACK_DATA Data,
     _In_ PCFLT_RELATED_OBJECTS FltObjects,
     _In_ FILE_INFORMATION_CLASS FileInformationClass)
@@ -530,6 +541,7 @@ RuleIsAllowWrite(
     NTSTATUS Status;
     PFLT_FILE_NAME_INFORMATION NameInfo;
     PFLT_FILE_NAME_INFORMATION DestinationNameInfo;
+    PCWSTR ClawName;
     BOOLEAN IsAllow;
 
     CheckDestinationName = (FileInformationClass == FileRenameInformation ||
@@ -538,6 +550,7 @@ RuleIsAllowWrite(
                             FileInformationClass == FileLinkInformationEx);
     NameInfo = NULL;
     DestinationNameInfo = NULL;
+    ClawName = ClawType->Name;
 
     Status = FltGetFileNameInformation(Data, FLT_FILE_NAME_NORMALIZED | FLT_FILE_NAME_QUERY_DEFAULT, &NameInfo);
     if (!NT_SUCCESS(Status))
@@ -545,11 +558,12 @@ RuleIsAllowWrite(
         return !CheckDestinationName;
     }
 
-    IsAllow = RuleIsAllowWritePath(&NameInfo->Name, FltObjects);
+    IsAllow = RuleIsAllowWritePath(ClawType, &NameInfo->Name, FltObjects);
     if (!IsAllow)
     {
         LOG(DPFLTR_TRACE_LEVEL,
-            "[BLOCK] %hs PID=%lu path=%wZ\n",
+            "[BLOCK] Claw=%ws %hs PID=%lu path=%wZ\n",
+            ClawName,
             GetOperationName(Data->Iopb->MajorFunction),
             FltGetRequestorProcessId(Data),
             &NameInfo->Name);
@@ -562,7 +576,8 @@ RuleIsAllowWrite(
         if (!NT_SUCCESS(Status))
         {
             LOG(DPFLTR_TRACE_LEVEL,
-                "[BLOCK] %hs PID=%lu source=%wZ destination-name-lookup=0x%08lX\n",
+                "[BLOCK] Claw=%ws %hs PID=%lu source=%wZ destination-name-lookup=0x%08lX\n",
+                ClawName,
                 GetOperationName(Data->Iopb->MajorFunction),
                 FltGetRequestorProcessId(Data),
                 &NameInfo->Name,
@@ -571,11 +586,12 @@ RuleIsAllowWrite(
             goto _Exit;
         }
 
-        IsAllow = RuleIsAllowWritePath(&DestinationNameInfo->Name, FltObjects);
+        IsAllow = RuleIsAllowWritePath(ClawType, &DestinationNameInfo->Name, FltObjects);
         if (!IsAllow)
         {
             LOG(DPFLTR_TRACE_LEVEL,
-                "[BLOCK] %hs PID=%lu source=%wZ destination=%wZ\n",
+                "[BLOCK] Claw=%ws %hs PID=%lu source=%wZ destination=%wZ\n",
+                ClawName,
                 GetOperationName(Data->Iopb->MajorFunction),
                 FltGetRequestorProcessId(Data),
                 &NameInfo->Name,
