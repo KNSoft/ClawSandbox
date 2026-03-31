@@ -54,6 +54,18 @@ RuleGetTrackedProcessClawType(
     return ClawType;
 }
 
+BOOLEAN
+RuleHasTrackedProcess(VOID)
+{
+    BOOLEAN HasTrackedProcess;
+
+    FltAcquirePushLockShared(&TrackedProcessLock);
+    HasTrackedProcess = !IsListEmpty(&TrackedProcessList);
+    FltReleasePushLock(&TrackedProcessLock);
+
+    return HasTrackedProcess;
+}
+
 NTSTATUS
 RuleTrackProcess(
     _In_ HANDLE ProcessId,

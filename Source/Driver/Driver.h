@@ -73,6 +73,9 @@ PRULE_CLAW_TYPE
 RuleGetTrackedProcessClawType(
     _In_ HANDLE ProcessId);
 
+BOOLEAN
+RuleHasTrackedProcess(VOID);
+
 NTSTATUS
 RuleTrackProcess(
     _In_ HANDLE ProcessId,

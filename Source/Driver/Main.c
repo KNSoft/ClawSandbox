@@ -194,6 +194,11 @@ MainFilterUnload(
     UNREFERENCED_PARAMETER(Flags);
     NTSTATUS Status;
 
+    if (RuleHasTrackedProcess())
+    {
+        return STATUS_FLT_DO_NOT_DETACH;
+    }
+
     Status = PsSetCreateProcessNotifyRoutineEx(MainProcessNotifyEx, TRUE);
     if (!NT_SUCCESS(Status))
     {
@@ -232,7 +237,7 @@ static CONST FLT_OPERATION_REGISTRATION OperationCallbacks[] = {
 static CONST FLT_REGISTRATION FilterRegistration = {
     sizeof(FLT_REGISTRATION),
     FLT_REGISTRATION_VERSION,
-    0,
+    FLTFL_REGISTRATION_DO_NOT_SUPPORT_SERVICE_STOP,
     NULL,
     OperationCallbacks,
     MainFilterUnload,
