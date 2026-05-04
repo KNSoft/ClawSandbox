@@ -91,12 +91,39 @@ IsEasyClawAllowWritePath(
     return StringContainsInSensetive(Path, &EasyClawPart);
 }
 
+/* AutoClaw */
+
+static CONST UNICODE_STRING AutoClawProcessName = RTL_CONSTANT_STRING(L"AutoClaw.exe");
+
+static CONST UNICODE_STRING AutoClawPart = RTL_CONSTANT_STRING(L"AutoClaw");
+
+static
+_Function_class_(FN_PROCESS_TRACK_CALLBACK)
+BOOLEAN
+IsAutoClawProcess(
+    _In_ PPS_CREATE_NOTIFY_INFO CreateInfo)
+{
+    return PathEndsWithComponentInsensitive(CreateInfo->ImageFileName, &AutoClawProcessName);
+}
+
+static
+_Function_class_(FN_FILE_WRITE_CALLBACK)
+BOOLEAN
+IsAutoClawAllowWritePath(
+    _In_ PCUNICODE_STRING Path,
+    _In_ PCFLT_RELATED_OBJECTS FltObjects)
+{
+    UNREFERENCED_PARAMETER(FltObjects);
+    return StringContainsInSensetive(Path, &AutoClawPart);
+}
+
 /* The whole list */
 
 static RULE_CLAW_TYPE g_aClawTypes[] = {
     { L"OpenClaw", &IsOpenClawProcess, &IsOpenClawAllowWritePath },
     { L"LobsterAI", &IsLobsterAIProcess, &IsLobsterAIAllowWritePath },
     { L"EasyClaw", &IsEasyClawProcess, &IsEasyClawAllowWritePath },
+    { L"AutoClaw", &IsAutoClawProcess, &IsAutoClawAllowWritePath },
 };
 
 _Ret_maybenull_
