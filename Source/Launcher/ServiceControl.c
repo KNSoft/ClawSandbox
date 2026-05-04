@@ -9,6 +9,7 @@ static const WCHAR kServiceGroup[] = L"FSFilter Activity Monitor";
 static const WCHAR kDefaultInstance[] = L"ClawSandbox Instance";
 static const WCHAR kDefaultAltitude[] = L"370131";
 static const DWORD kSupportedFeatures = 3;
+static const DWORD kSelfProtection = 0;
 
 static void ClearErrorMessage(WCHAR* errorMessage, size_t errorMessageCount)
 {
@@ -282,6 +283,12 @@ static BOOL ConfigureServiceRegistry(WCHAR* errorMessage, size_t errorMessageCou
     }
 
     if (!WriteDwordValue(HKEY_LOCAL_MACHINE, parametersKey, L"SupportedFeatures", kSupportedFeatures))
+    {
+        FormatWin32Message(GetLastError(), errorMessage, errorMessageCount);
+        return FALSE;
+    }
+
+    if (!WriteDwordValue(HKEY_LOCAL_MACHINE, parametersKey, L"SelfProtection", kSelfProtection))
     {
         FormatWin32Message(GetLastError(), errorMessage, errorMessageCount);
         return FALSE;

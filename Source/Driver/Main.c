@@ -274,7 +274,7 @@ MainFilterUnload(
     UNREFERENCED_PARAMETER(Flags);
     NTSTATUS Status;
 
-    if (RuleHasTrackedProcess())
+    if (RuleIsSelfProtectionEnabled() && RuleHasTrackedProcess())
     {
         return STATUS_FLT_DO_NOT_DETACH;
     }

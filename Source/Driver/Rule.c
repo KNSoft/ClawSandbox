@@ -136,8 +136,16 @@ static UNICODE_STRING SystemRoot = RTL_CONSTANT_STRING(L"\\SystemRoot");
 static OBJECT_ATTRIBUTES Attributes = RTL_CONSTANT_OBJECT_ATTRIBUTES(&SystemRoot, OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE);
 static CONST UNICODE_STRING ParametersSubKey = RTL_CONSTANT_STRING(L"\\Parameters");
 static CONST UNICODE_STRING FsWhiteListValueName = RTL_CONSTANT_STRING(L"FSWhiteList");
+static CONST UNICODE_STRING SelfProtectionValueName = RTL_CONSTANT_STRING(L"SelfProtection");
 static PWCHAR FsWhiteListBuffer = NULL;
 static ULONG FsWhiteListBufferLength;
+static BOOLEAN SelfProtectionEnabled = FALSE;
+
+BOOLEAN
+RuleIsSelfProtectionEnabled(VOID)
+{
+    return SelfProtectionEnabled;
+}
 
 static
 VOID
@@ -153,10 +161,10 @@ RuleFreeFsWhiteList(VOID)
 
 static
 NTSTATUS
-RuleLoadFsWhiteList(
+RuleLoadParameterValue(
     _In_ PCUNICODE_STRING RegistryPath,
-    _Outptr_result_maybenull_ PWCHAR* Buffer,
-    _Out_ PULONG BufferLength)
+    _In_ PCUNICODE_STRING ValueName,
+    _Outptr_ PKEY_VALUE_PARTIAL_INFORMATION* ValueInformation)
 {
     NTSTATUS Status;
     ULONG ParametersPathMaximumLength;
@@ -165,16 +173,14 @@ RuleLoadFsWhiteList(
     OBJECT_ATTRIBUTES ObjectAttributes;
     HANDLE KeyHandle;
     ULONG ResultLength;
-    PKEY_VALUE_PARTIAL_INFORMATION ValueInformation;
-    PWCHAR ValueBuffer;
+    PKEY_VALUE_PARTIAL_INFORMATION LocalValueInformation;
 
-    if (RegistryPath == NULL || RegistryPath->Buffer == NULL || Buffer == NULL || BufferLength == NULL)
+    if (RegistryPath == NULL || RegistryPath->Buffer == NULL || ValueName == NULL || ValueInformation == NULL)
     {
         return STATUS_INVALID_PARAMETER;
     }
 
-    *Buffer = NULL;
-    *BufferLength = 0;
+    *ValueInformation = NULL;
 
     if ((ULONG)RegistryPath->Length + (ULONG)ParametersSubKey.Length + (ULONG)sizeof(WCHAR) > MAXUSHORT)
     {
@@ -225,7 +231,7 @@ RuleLoadFsWhiteList(
 
     ResultLength = 0;
     Status = ZwQueryValueKey(KeyHandle,
-                             (PUNICODE_STRING)&FsWhiteListValueName,
+                             (PUNICODE_STRING)ValueName,
                              KeyValuePartialInformation,
                              NULL,
                              0,
@@ -240,25 +246,54 @@ RuleLoadFsWhiteList(
         return Status;
     }
 
-    ValueInformation = (PKEY_VALUE_PARTIAL_INFORMATION)ExAllocatePool2(POOL_FLAG_NON_PAGED,
-                                                                       ResultLength,
-                                                                       CLAWSANDBOX_TAG);
-    if (ValueInformation == NULL)
+    LocalValueInformation = (PKEY_VALUE_PARTIAL_INFORMATION)ExAllocatePool2(POOL_FLAG_NON_PAGED,
+                                                                            ResultLength,
+                                                                            CLAWSANDBOX_TAG);
+    if (LocalValueInformation == NULL)
     {
         ZwClose(KeyHandle);
         return STATUS_INSUFFICIENT_RESOURCES;
     }
 
     Status = ZwQueryValueKey(KeyHandle,
-                             (PUNICODE_STRING)&FsWhiteListValueName,
+                             (PUNICODE_STRING)ValueName,
                              KeyValuePartialInformation,
-                             ValueInformation,
+                             LocalValueInformation,
                              ResultLength,
                              &ResultLength);
     ZwClose(KeyHandle);
     if (!NT_SUCCESS(Status))
     {
-        ExFreePoolWithTag(ValueInformation, CLAWSANDBOX_TAG);
+        ExFreePoolWithTag(LocalValueInformation, CLAWSANDBOX_TAG);
+        return Status;
+    }
+
+    *ValueInformation = LocalValueInformation;
+    return STATUS_SUCCESS;
+}
+
+static
+NTSTATUS
+RuleLoadFsWhiteList(
+    _In_ PCUNICODE_STRING RegistryPath,
+    _Outptr_result_maybenull_ PWCHAR* Buffer,
+    _Out_ PULONG BufferLength)
+{
+    NTSTATUS Status;
+    PKEY_VALUE_PARTIAL_INFORMATION ValueInformation;
+    PWCHAR ValueBuffer;
+
+    if (Buffer == NULL || BufferLength == NULL)
+    {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    *Buffer = NULL;
+    *BufferLength = 0;
+
+    Status = RuleLoadParameterValue(RegistryPath, &FsWhiteListValueName, &ValueInformation);
+    if (!NT_SUCCESS(Status))
+    {
         return Status;
     }
 
@@ -282,6 +317,38 @@ RuleLoadFsWhiteList(
     *Buffer = ValueBuffer;
     *BufferLength = ValueInformation->DataLength + sizeof(WCHAR);
 
+    ExFreePoolWithTag(ValueInformation, CLAWSANDBOX_TAG);
+    return STATUS_SUCCESS;
+}
+
+static
+NTSTATUS
+RuleLoadDwordParameter(
+    _In_ PCUNICODE_STRING RegistryPath,
+    _In_ PCUNICODE_STRING ValueName,
+    _Out_ PULONG Value)
+{
+    NTSTATUS Status;
+    PKEY_VALUE_PARTIAL_INFORMATION ValueInformation;
+
+    if (Value == NULL)
+    {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    Status = RuleLoadParameterValue(RegistryPath, ValueName, &ValueInformation);
+    if (!NT_SUCCESS(Status))
+    {
+        return Status;
+    }
+
+    if (ValueInformation->Type != REG_DWORD || ValueInformation->DataLength != sizeof(ULONG))
+    {
+        ExFreePoolWithTag(ValueInformation, CLAWSANDBOX_TAG);
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    RtlCopyMemory(Value, ValueInformation->Data, sizeof(*Value));
     ExFreePoolWithTag(ValueInformation, CLAWSANDBOX_TAG);
     return STATUS_SUCCESS;
 }
@@ -386,6 +453,7 @@ RuleInitialize(
     _In_ PCUNICODE_STRING RegistryPath)
 {
     NTSTATUS Status;
+    ULONG Value;
 
     FltInitializePushLock(&TrackedProcessLock);
     InitializeListHead(&TrackedProcessList);
@@ -398,6 +466,13 @@ RuleInitialize(
     }
 
     Status = RuleLoadFsWhiteList(RegistryPath, &FsWhiteListBuffer, &FsWhiteListBufferLength);
+    UNREFERENCED_PARAMETER(Status);
+
+    Status = RuleLoadDwordParameter(RegistryPath, &SelfProtectionValueName, &Value);
+    if (NT_SUCCESS(Status))
+    {
+        SelfProtectionEnabled = Value != 0;
+    }
     UNREFERENCED_PARAMETER(Status);
 
     return STATUS_SUCCESS;
@@ -436,6 +511,7 @@ RuleUninitialize(VOID)
     }
 
     RuleFreeFsWhiteList();
+    SelfProtectionEnabled = FALSE;
     FltDeletePushLock(&TrackedProcessLock);
 }
 

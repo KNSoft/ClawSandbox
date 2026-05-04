@@ -98,6 +98,9 @@ RuleGetTrackedProcessClawType(
 BOOLEAN
 RuleHasTrackedProcess(VOID);
 
+BOOLEAN
+RuleIsSelfProtectionEnabled(VOID);
+
 NTSTATUS
 RuleTrackProcess(
     _In_ HANDLE ProcessId,
