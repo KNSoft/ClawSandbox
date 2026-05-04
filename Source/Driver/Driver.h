@@ -3,6 +3,22 @@
 #include <fltKernel.h>
 #include <ntstrsafe.h>
 
+/* WDK/SDK */
+
+NTSYSAPI
+NTSTATUS
+NTAPI
+ZwGetNextProcess(
+    _In_opt_ HANDLE ProcessHandle,
+    _In_ ACCESS_MASK DesiredAccess,
+    _In_ ULONG HandleAttributes,
+    _In_ ULONG Flags,
+    _Out_ PHANDLE NewProcessHandle);
+
+#ifndef PROCESS_QUERY_LIMITED_INFORMATION
+#define PROCESS_QUERY_LIMITED_INFORMATION 0x1000
+#endif
+
 #define LOG_PREFIX "[ClawSandbox] "
 #define LOG(Level, Format, ...) DbgPrintEx(DPFLTR_IHVDRIVER_ID, Level, LOG_PREFIX Format, ##__VA_ARGS__)
 #define CLAWSANDBOX_TAG 'bSlC'
@@ -49,6 +65,7 @@ FN_FILE_WRITE_CALLBACK(
 typedef struct _RULE_CLAW_TYPE
 {
     _Notnull_ PCWSTR Name;
+    _Maybenull_ PCUNICODE_STRING SpecificProcessName;
     _Notnull_ FN_PROCESS_TRACK_CALLBACK* ProcessTrackCallback;
     _Notnull_ FN_FILE_WRITE_CALLBACK* FileWriteCallback;
 } RULE_CLAW_TYPE, *PRULE_CLAW_TYPE;
@@ -57,6 +74,11 @@ _Ret_maybenull_
 PRULE_CLAW_TYPE
 RuleListMatchClawTypeCreate(
     _In_ PPS_CREATE_NOTIFY_INFO CreateInfo);
+
+_Ret_maybenull_
+PRULE_CLAW_TYPE
+RuleListMatchClawTypeImageName(
+    _In_ PCUNICODE_STRING ImageName);
 
 /* Rule.c */
 

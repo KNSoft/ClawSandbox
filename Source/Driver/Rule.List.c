@@ -120,10 +120,10 @@ IsAutoClawAllowWritePath(
 /* The whole list */
 
 static RULE_CLAW_TYPE g_aClawTypes[] = {
-    { L"OpenClaw", &IsOpenClawProcess, &IsOpenClawAllowWritePath },
-    { L"LobsterAI", &IsLobsterAIProcess, &IsLobsterAIAllowWritePath },
-    { L"EasyClaw", &IsEasyClawProcess, &IsEasyClawAllowWritePath },
-    { L"AutoClaw", &IsAutoClawProcess, &IsAutoClawAllowWritePath },
+    { L"OpenClaw", NULL, &IsOpenClawProcess, &IsOpenClawAllowWritePath },
+    { L"LobsterAI", &LobsterAIProcessName, &IsLobsterAIProcess, &IsLobsterAIAllowWritePath },
+    { L"EasyClaw", &EasyClawProcessName, &IsEasyClawProcess, &IsEasyClawAllowWritePath },
+    { L"AutoClaw", &AutoClawProcessName, &IsAutoClawProcess, &IsAutoClawAllowWritePath },
 };
 
 _Ret_maybenull_
@@ -141,6 +141,27 @@ RuleListMatchClawTypeCreate(
     for (ULONG i = 0; i < ARRAYSIZE(g_aClawTypes); i++)
     {
         if (g_aClawTypes[i].ProcessTrackCallback(CreateInfo))
+        {
+            return &g_aClawTypes[i];
+        }
+    }
+    return NULL;
+}
+
+_Ret_maybenull_
+PRULE_CLAW_TYPE
+RuleListMatchClawTypeImageName(
+    _In_ PCUNICODE_STRING ImageName)
+{
+    if (ImageName == NULL)
+    {
+        return NULL;
+    }
+
+    for (ULONG i = 0; i < ARRAYSIZE(g_aClawTypes); i++)
+    {
+        if (g_aClawTypes[i].SpecificProcessName != NULL &&
+            PathEndsWithComponentInsensitive(ImageName, g_aClawTypes[i].SpecificProcessName))
         {
             return &g_aClawTypes[i];
         }

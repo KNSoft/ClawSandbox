@@ -186,6 +186,86 @@ MainProcessNotifyEx(
 static PFLT_FILTER FilterHandle;
 
 static
+VOID
+MainTrackExistingProcesses(VOID)
+{
+    HANDLE ProcessHandle;
+    HANDLE NextProcessHandle;
+    PEPROCESS Process;
+    PUNICODE_STRING ImageName;
+    PRULE_CLAW_TYPE ClawType;
+    NTSTATUS Status;
+    HANDLE ProcessId;
+
+    ProcessHandle = NULL;
+    while (TRUE)
+    {
+        NextProcessHandle = NULL;
+        Status = ZwGetNextProcess(ProcessHandle,
+                                  PROCESS_QUERY_LIMITED_INFORMATION,
+                                  OBJ_KERNEL_HANDLE,
+                                  0,
+                                  &NextProcessHandle);
+        if (ProcessHandle != NULL)
+        {
+            ZwClose(ProcessHandle);
+        }
+
+        ProcessHandle = NextProcessHandle;
+        if (!NT_SUCCESS(Status))
+        {
+            break;
+        }
+
+        Process = NULL;
+        Status = ObReferenceObjectByHandle(ProcessHandle,
+                                           PROCESS_QUERY_LIMITED_INFORMATION,
+                                           *PsProcessType,
+                                           KernelMode,
+                                           (PVOID*)&Process,
+                                           NULL);
+        if (!NT_SUCCESS(Status))
+        {
+            continue;
+        }
+
+        ImageName = NULL;
+        Status = SeLocateProcessImageName(Process, &ImageName);
+        if (!NT_SUCCESS(Status) || ImageName == NULL)
+        {
+            ObDereferenceObject(Process);
+            continue;
+        }
+
+        ClawType = RuleListMatchClawTypeImageName(ImageName);
+        if (ClawType != NULL)
+        {
+            ProcessId = PsGetProcessId(Process);
+            Status = RuleTrackProcess(ProcessId, ClawType);
+            if (NT_SUCCESS(Status))
+            {
+                LOG(DPFLTR_INFO_LEVEL,
+                    "Start tracking existing process PID=%lu Claw=%ws ImageName=%wZ\n",
+                    (ULONG)(ULONG_PTR)ProcessId,
+                    ClawType->Name,
+                    ImageName);
+            } else
+            {
+                LOG(DPFLTR_INFO_LEVEL,
+                    "Failed (0x%08lX) to track existing process PID=%lu Claw=%ws ImageName=%wZ\n",
+                    Status,
+                    (ULONG)(ULONG_PTR)ProcessId,
+                    ClawType->Name,
+                    ImageName);
+            }
+        }
+
+        ExFreePool(ImageName);
+        ObDereferenceObject(Process);
+    }
+}
+
+static
 NTSTATUS
 FLTAPI
 MainFilterUnload(
@@ -269,6 +349,7 @@ DriverEntry(
             Status = PsSetCreateProcessNotifyRoutineEx(MainProcessNotifyEx, FALSE);
             if (NT_SUCCESS(Status))
             {
+                MainTrackExistingProcesses();
                 Status = FltStartFiltering(FilterHandle);
                 if (NT_SUCCESS(Status))
                 {
