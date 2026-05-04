@@ -176,12 +176,12 @@ RuleLoadFsWhiteList(
     *Buffer = NULL;
     *BufferLength = 0;
 
-    if ((ULONG)RegistryPath->Length + ParametersSubKey.Length + sizeof(WCHAR) > MAXUSHORT)
+    if ((ULONG)RegistryPath->Length + (ULONG)ParametersSubKey.Length + (ULONG)sizeof(WCHAR) > MAXUSHORT)
     {
         return STATUS_NAME_TOO_LONG;
     }
 
-    ParametersPathMaximumLength = (ULONG)RegistryPath->Length + ParametersSubKey.Length + sizeof(WCHAR);
+    ParametersPathMaximumLength = (ULONG)RegistryPath->Length + (ULONG)ParametersSubKey.Length + (ULONG)sizeof(WCHAR);
     ParametersPathBuffer = (PWCHAR)ExAllocatePool2(POOL_FLAG_NON_PAGED,
                                                    ParametersPathMaximumLength,
                                                    CLAWSANDBOX_TAG);
