@@ -118,6 +118,11 @@ void AppFreeLocalizedStrings(void)
     AppFreeString(&g_app.text.actionFailedFormat);
     AppFreeString(&g_app.text.defaultOperation);
     AppFreeString(&g_app.text.unknownError);
+    AppFreeString(&g_app.text.managedProcessesButton);
+    AppFreeString(&g_app.text.managedProcessesTitle);
+    AppFreeString(&g_app.text.actionQueryManagedProcesses);
+    AppFreeString(&g_app.text.noManagedProcess);
+    AppFreeString(&g_app.text.pathUnavailable);
 }
 
 void AppLoadLocalizedStrings(HINSTANCE instance)
@@ -145,6 +150,11 @@ void AppLoadLocalizedStrings(HINSTANCE instance)
     AppLoadLocalizedString(&g_app.text.actionFailedFormat, instance, IDS_ACTION_FAILED_FORMAT);
     AppLoadLocalizedString(&g_app.text.defaultOperation, instance, IDS_DEFAULT_OPERATION);
     AppLoadLocalizedString(&g_app.text.unknownError, instance, IDS_UNKNOWN_ERROR);
+    AppLoadLocalizedString(&g_app.text.managedProcessesButton, instance, IDS_MANAGED_PROCESSES_BUTTON);
+    AppLoadLocalizedString(&g_app.text.managedProcessesTitle, instance, IDS_MANAGED_PROCESSES_TITLE);
+    AppLoadLocalizedString(&g_app.text.actionQueryManagedProcesses, instance, IDS_ACTION_QUERY_MANAGED_PROCESSES);
+    AppLoadLocalizedString(&g_app.text.noManagedProcess, instance, IDS_NO_MANAGED_PROCESS);
+    AppLoadLocalizedString(&g_app.text.pathUnavailable, instance, IDS_PATH_UNAVAILABLE);
 }
 
 HFONT AppGetFallbackUiFont(void)

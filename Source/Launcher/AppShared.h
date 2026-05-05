@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <Windows.h>
 
@@ -28,7 +28,8 @@ enum
     APP_BASE_DISPLAY_ICON_SOURCE_SIZE = 256,
     APP_BASE_DISPLAY_IMAGE_SIZE = 256,
     APP_ID_TOGGLE_DRIVER = 1001,
-    APP_ID_PROJECT_LINK = 1002
+    APP_ID_TRACKED_PROCESSES = 1002,
+    APP_ID_PROJECT_LINK = 1003
 };
 
 typedef struct AppImage AppImage;
@@ -58,12 +59,18 @@ typedef struct LocalizedStrings
     WCHAR* actionFailedFormat;
     WCHAR* defaultOperation;
     WCHAR* unknownError;
+    WCHAR* managedProcessesButton;
+    WCHAR* managedProcessesTitle;
+    WCHAR* actionQueryManagedProcesses;
+    WCHAR* noManagedProcess;
+    WCHAR* pathUnavailable;
 } LocalizedStrings;
 
 typedef struct AppState
 {
     HWND hwnd;
     HWND toggleButton;
+    HWND trackedButton;
     HWND projectLink;
     HANDLE singleInstanceMutex;
     BOOL trayIconVisible;

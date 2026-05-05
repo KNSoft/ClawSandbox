@@ -67,6 +67,40 @@ RuleHasTrackedProcess(VOID)
 }
 
 NTSTATUS
+RuleCopyTrackedProcessIds(
+    _Out_writes_to_opt_(Capacity, *Count) PULONG_PTR ProcessIds,
+    _In_ ULONG Capacity,
+    _Out_ PULONG Count)
+{
+    ULONG LocalCount;
+    PLIST_ENTRY Link;
+
+    if (Count == NULL || (Capacity != 0 && ProcessIds == NULL))
+    {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    LocalCount = 0;
+
+    FltAcquirePushLockShared(&TrackedProcessLock);
+    for (Link = TrackedProcessList.Flink; Link != &TrackedProcessList; Link = Link->Flink)
+    {
+        PTRACKED_PROCESS_ENTRY Entry;
+
+        Entry = CONTAINING_RECORD(Link, TRACKED_PROCESS_ENTRY, Link);
+        if (LocalCount < Capacity)
+        {
+            ProcessIds[LocalCount] = (ULONG_PTR)Entry->ProcessId;
+        }
+        LocalCount++;
+    }
+    FltReleasePushLock(&TrackedProcessLock);
+
+    *Count = LocalCount;
+    return LocalCount <= Capacity ? STATUS_SUCCESS : STATUS_BUFFER_TOO_SMALL;
+}
+
+NTSTATUS
 RuleTrackProcess(
     _In_ HANDLE ProcessId,
     _In_ PRULE_CLAW_TYPE ClawType)

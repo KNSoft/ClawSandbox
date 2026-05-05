@@ -1,19 +1,98 @@
 #include "../UserDll/UserDll.h"
 
 #include <intsafe.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <strsafe.h>
 
+static DWORD WriteUtf8(HANDLE output, PCWSTR text)
+{
+    char stackBuffer[1024];
+    char* buffer;
+    int byteCount;
+    DWORD written;
+    BOOL ok;
+
+    if (text == NULL)
+    {
+        return ERROR_INVALID_PARAMETER;
+    }
+
+    byteCount = WideCharToMultiByte(CP_UTF8, 0, text, -1, stackBuffer, ARRAYSIZE(stackBuffer), NULL, NULL);
+    if (byteCount != 0)
+    {
+        WriteFile(output, stackBuffer, (DWORD)byteCount - 1, &written, NULL);
+        return ERROR_SUCCESS;
+    }
+
+    byteCount = WideCharToMultiByte(CP_UTF8, 0, text, -1, NULL, 0, NULL, NULL);
+    if (byteCount == 0)
+    {
+        return GetLastError();
+    }
+
+    buffer = (char*)HeapAlloc(GetProcessHeap(), 0, byteCount);
+    if (buffer == NULL)
+    {
+        return ERROR_NOT_ENOUGH_MEMORY;
+    }
+
+    byteCount = WideCharToMultiByte(CP_UTF8, 0, text, -1, buffer, byteCount, NULL, NULL);
+    ok = byteCount != 0 && WriteFile(output, buffer, (DWORD)byteCount - 1, &written, NULL);
+    HeapFree(GetProcessHeap(), 0, buffer);
+    return ok ? ERROR_SUCCESS : GetLastError();
+}
+
+static DWORD WriteFormatted(HANDLE output, PCWSTR format, ...)
+{
+    WCHAR stackBuffer[1024];
+    WCHAR* buffer;
+    va_list args;
+    HRESULT hr;
+    DWORD result;
+
+    va_start(args, format);
+    hr = StringCchVPrintfW(stackBuffer, ARRAYSIZE(stackBuffer), format, args);
+    va_end(args);
+    if (SUCCEEDED(hr))
+    {
+        return WriteUtf8(output, stackBuffer);
+    }
+
+    buffer = (WCHAR*)HeapAlloc(GetProcessHeap(), 0, 32768 * sizeof(WCHAR));
+    if (buffer == NULL)
+    {
+        return ERROR_NOT_ENOUGH_MEMORY;
+    }
+
+    va_start(args, format);
+    hr = StringCchVPrintfW(buffer, 32768, format, args);
+    va_end(args);
+    if (FAILED(hr))
+    {
+        HeapFree(GetProcessHeap(), 0, buffer);
+        return HRESULT_CODE(hr);
+    }
+
+    result = WriteUtf8(output, buffer);
+    HeapFree(GetProcessHeap(), 0, buffer);
+    return result;
+}
+
 static void PrintUsage(void)
 {
-    wprintf(L"Usage:\n");
-    wprintf(L"  ClawSandbox status\n");
-    wprintf(L"  ClawSandbox install\n");
-    wprintf(L"  ClawSandbox start\n");
-    wprintf(L"  ClawSandbox stop\n");
-    wprintf(L"  ClawSandbox uninstall\n");
-    wprintf(L"  ClawSandbox self-protection on|off\n");
-    wprintf(L"  ClawSandbox fs-whitelist [path ...]\n");
+    WriteUtf8(
+        GetStdHandle(STD_OUTPUT_HANDLE),
+        L"Usage:\n"
+        L"  ClawSandbox status\n"
+        L"  ClawSandbox install\n"
+        L"  ClawSandbox start\n"
+        L"  ClawSandbox stop\n"
+        L"  ClawSandbox uninstall\n"
+        L"  ClawSandbox self-protection on|off\n"
+        L"  ClawSandbox fs-whitelist [path ...]\n"
+        L"  ClawSandbox tracked-pids\n"
+        L"  ClawSandbox tracked\n");
 }
 
 static BOOL EqualCommand(PCWSTR left, PCWSTR right)
@@ -25,11 +104,11 @@ static DWORD PrintError(DWORD error, PCWSTR message)
 {
     if (message != NULL && message[0] != L'\0')
     {
-        fwprintf(stderr, L"%s\n", message);
+        WriteFormatted(GetStdHandle(STD_ERROR_HANDLE), L"%s\n", message);
     }
     else
     {
-        fwprintf(stderr, L"Operation failed: 0x%08lX\n", error);
+        WriteFormatted(GetStdHandle(STD_ERROR_HANDLE), L"Operation failed: 0x%08lX\n", error);
     }
     return error;
 }
@@ -82,27 +161,27 @@ static DWORD PrintServiceState(void)
 
     if (!state.installed)
     {
-        wprintf(L"not installed\n");
+        WriteFormatted(GetStdHandle(STD_OUTPUT_HANDLE), L"not installed\n");
     }
     else if (state.deletePending)
     {
-        wprintf(L"delete pending\n");
+        WriteFormatted(GetStdHandle(STD_OUTPUT_HANDLE), L"delete pending\n");
     }
     else if (state.running)
     {
-        wprintf(L"running\n");
+        WriteFormatted(GetStdHandle(STD_OUTPUT_HANDLE), L"running\n");
     }
     else if (state.startPending)
     {
-        wprintf(L"start pending\n");
+        WriteFormatted(GetStdHandle(STD_OUTPUT_HANDLE), L"start pending\n");
     }
     else if (state.stopPending)
     {
-        wprintf(L"stop pending\n");
+        WriteFormatted(GetStdHandle(STD_OUTPUT_HANDLE), L"stop pending\n");
     }
     else
     {
-        wprintf(L"stopped\n");
+        WriteFormatted(GetStdHandle(STD_OUTPUT_HANDLE), L"stopped\n");
     }
 
     return ERROR_SUCCESS;
@@ -206,9 +285,108 @@ static DWORD SetFsWhiteList(int count, wchar_t** values)
     return ERROR_SUCCESS;
 }
 
+static DWORD QueryTrackedProcessIds(void)
+{
+    WCHAR errorMessage[CLAWSANDBOX_ERROR_CAPACITY];
+    PDWORD processIds;
+    DWORD capacity;
+    DWORD count;
+    DWORD result;
+    DWORD i;
+
+    capacity = 32;
+    processIds = NULL;
+    for (;;)
+    {
+        processIds = (PDWORD)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, capacity * sizeof(DWORD));
+        if (processIds == NULL)
+        {
+            return PrintError(ERROR_NOT_ENOUGH_MEMORY, NULL);
+        }
+
+        result = ClawSandboxQueryTrackedProcessIds(processIds, capacity, &count, errorMessage, ARRAYSIZE(errorMessage));
+        if (result != ERROR_MORE_DATA)
+        {
+            break;
+        }
+
+        HeapFree(GetProcessHeap(), 0, processIds);
+        processIds = NULL;
+        capacity = count;
+    }
+
+    if (result != ERROR_SUCCESS)
+    {
+        HeapFree(GetProcessHeap(), 0, processIds);
+        return PrintError(result, errorMessage);
+    }
+
+    for (i = 0; i < count; i++)
+    {
+        WriteFormatted(GetStdHandle(STD_OUTPUT_HANDLE), L"%lu\n", processIds[i]);
+    }
+
+    HeapFree(GetProcessHeap(), 0, processIds);
+    return ERROR_SUCCESS;
+}
+
+static DWORD QueryTrackedProcesses(void)
+{
+    WCHAR errorMessage[CLAWSANDBOX_ERROR_CAPACITY];
+    CLAWSANDBOX_TRACKED_PROCESS* processes;
+    DWORD capacity;
+    DWORD count;
+    DWORD result;
+    DWORD i;
+
+    capacity = 32;
+    processes = NULL;
+    for (;;)
+    {
+        processes = (CLAWSANDBOX_TRACKED_PROCESS*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, capacity * sizeof(CLAWSANDBOX_TRACKED_PROCESS));
+        if (processes == NULL)
+        {
+            return PrintError(ERROR_NOT_ENOUGH_MEMORY, NULL);
+        }
+
+        result = ClawSandboxQueryTrackedProcesses(processes, capacity, &count, errorMessage, ARRAYSIZE(errorMessage));
+        if (result != ERROR_MORE_DATA)
+        {
+            break;
+        }
+
+        HeapFree(GetProcessHeap(), 0, processes);
+        processes = NULL;
+        capacity = count;
+    }
+
+    if (result != ERROR_SUCCESS)
+    {
+        HeapFree(GetProcessHeap(), 0, processes);
+        return PrintError(result, errorMessage);
+    }
+
+    for (i = 0; i < count; i++)
+    {
+        if (processes[i].imagePathAvailable)
+        {
+            WriteFormatted(GetStdHandle(STD_OUTPUT_HANDLE), L"%lu\t%s\n", processes[i].processId, processes[i].imagePath);
+        }
+        else
+        {
+            WriteFormatted(GetStdHandle(STD_OUTPUT_HANDLE), L"%lu\t%s\n", processes[i].processId, L"<path unavailable>");
+        }
+    }
+
+    HeapFree(GetProcessHeap(), 0, processes);
+    return ERROR_SUCCESS;
+}
+
 int wmain(int argc, wchar_t** argv)
 {
     DWORD result;
+
+    SetConsoleOutputCP(CP_UTF8);
 
     if (argc < 2)
     {
@@ -243,6 +421,14 @@ int wmain(int argc, wchar_t** argv)
     else if (EqualCommand(argv[1], L"fs-whitelist"))
     {
         result = SetFsWhiteList(argc - 2, argv + 2);
+    }
+    else if (EqualCommand(argv[1], L"tracked-pids"))
+    {
+        result = QueryTrackedProcessIds();
+    }
+    else if (EqualCommand(argv[1], L"tracked"))
+    {
+        result = QueryTrackedProcesses();
     }
     else
     {

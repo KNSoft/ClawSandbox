@@ -2,6 +2,7 @@
 
 #include <fltKernel.h>
 #include <ntstrsafe.h>
+#include "../Common/ClawSandboxProtocol.h"
 
 /* WDK/SDK */
 
@@ -80,6 +81,15 @@ PRULE_CLAW_TYPE
 RuleListMatchClawTypeImageName(
     _In_ PCUNICODE_STRING ImageName);
 
+/* Communication.c */
+
+NTSTATUS
+MainCreateCommunicationPort(
+    _In_ PFLT_FILTER Filter);
+
+VOID
+MainCloseCommunicationPort(VOID);
+
 /* Rule.c */
 
 NTSTATUS
@@ -97,6 +107,12 @@ RuleGetTrackedProcessClawType(
 
 BOOLEAN
 RuleHasTrackedProcess(VOID);
+
+NTSTATUS
+RuleCopyTrackedProcessIds(
+    _Out_writes_to_opt_(Capacity, *Count) PULONG_PTR ProcessIds,
+    _In_ ULONG Capacity,
+    _Out_ PULONG Count);
 
 BOOLEAN
 RuleIsSelfProtectionEnabled(VOID);

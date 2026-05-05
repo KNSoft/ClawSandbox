@@ -237,11 +237,21 @@ MainTrackExistingProcesses(VOID)
             continue;
         }
 
-        ClawType = RuleListMatchClawTypeImageName(ImageName);
-        if (ClawType != NULL)
+    ClawType = RuleListMatchClawTypeImageName(ImageName);
+    if (ClawType != NULL)
+    {
+        ProcessId = PsGetProcessId(Process);
+        if (PsGetProcessExitStatus(Process) != STATUS_PENDING)
         {
-            ProcessId = PsGetProcessId(Process);
+            Status = STATUS_PROCESS_IS_TERMINATING;
+        } else
+        {
             Status = RuleTrackProcess(ProcessId, ClawType);
+            if (NT_SUCCESS(Status) && PsGetProcessExitStatus(Process) != STATUS_PENDING)
+            {
+                RuleUntrackProcess(ProcessId);
+                Status = STATUS_PROCESS_IS_TERMINATING;
+            }
             if (NT_SUCCESS(Status))
             {
                 LOG(DPFLTR_INFO_LEVEL,
@@ -249,16 +259,18 @@ MainTrackExistingProcesses(VOID)
                     (ULONG)(ULONG_PTR)ProcessId,
                     ClawType->Name,
                     ImageName);
-            } else
-            {
-                LOG(DPFLTR_INFO_LEVEL,
-                    "Failed (0x%08lX) to track existing process PID=%lu Claw=%ws ImageName=%wZ\n",
-                    Status,
-                    (ULONG)(ULONG_PTR)ProcessId,
-                    ClawType->Name,
-                    ImageName);
             }
         }
+        if (!NT_SUCCESS(Status))
+        {
+            LOG(DPFLTR_INFO_LEVEL,
+                "Failed (0x%08lX) to track existing process PID=%lu Claw=%ws ImageName=%wZ\n",
+                Status,
+                (ULONG)(ULONG_PTR)ProcessId,
+                ClawType->Name,
+                ImageName);
+        }
+    }
 
         ExFreePool(ImageName);
         ObDereferenceObject(Process);
@@ -284,6 +296,7 @@ MainFilterUnload(
     {
         return Status;
     }
+    MainCloseCommunicationPort();
     FltUnregisterFilter(FilterHandle);
     RuleUninitialize();
 
@@ -346,16 +359,21 @@ DriverEntry(
         Status = RuleInitialize(FilterHandle, RegistryPath);
         if (NT_SUCCESS(Status))
         {
-            Status = PsSetCreateProcessNotifyRoutineEx(MainProcessNotifyEx, FALSE);
+            Status = MainCreateCommunicationPort(FilterHandle);
             if (NT_SUCCESS(Status))
             {
-                MainTrackExistingProcesses();
-                Status = FltStartFiltering(FilterHandle);
+                Status = PsSetCreateProcessNotifyRoutineEx(MainProcessNotifyEx, FALSE);
                 if (NT_SUCCESS(Status))
                 {
-                    return STATUS_SUCCESS;
+                    MainTrackExistingProcesses();
+                    Status = FltStartFiltering(FilterHandle);
+                    if (NT_SUCCESS(Status))
+                    {
+                        return STATUS_SUCCESS;
+                    }
+                    PsSetCreateProcessNotifyRoutineEx(MainProcessNotifyEx, TRUE);
                 }
-                PsSetCreateProcessNotifyRoutineEx(MainProcessNotifyEx, TRUE);
+                MainCloseCommunicationPort();
             }
             RuleUninitialize();
         }

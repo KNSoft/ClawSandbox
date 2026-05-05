@@ -90,6 +90,11 @@ BEGIN
     IDS_ACTION_FAILED_FORMAT "%s failed.\n\n%s"
     IDS_DEFAULT_OPERATION   "Operation"
     IDS_UNKNOWN_ERROR       "Unknown error."
+    IDS_MANAGED_PROCESSES_BUTTON "Managed processes"
+    IDS_MANAGED_PROCESSES_TITLE "Managed processes"
+    IDS_ACTION_QUERY_MANAGED_PROCESSES "Query managed processes"
+    IDS_NO_MANAGED_PROCESS  "No managed process."
+    IDS_PATH_UNAVAILABLE    "<path unavailable>"
 END
 
 #endif    // Neutral (Default) resources
@@ -136,6 +141,11 @@ BEGIN
     IDS_ACTION_FAILED_FORMAT "%s失败。\n\n%s"
     IDS_DEFAULT_OPERATION   "操作"
     IDS_UNKNOWN_ERROR       "未知错误。"
+    IDS_MANAGED_PROCESSES_BUTTON "被管控进程"
+    IDS_MANAGED_PROCESSES_TITLE "被管控进程"
+    IDS_ACTION_QUERY_MANAGED_PROCESSES "查询被管控进程"
+    IDS_NO_MANAGED_PROCESS  "当前没有被管控的进程。"
+    IDS_PATH_UNAVAILABLE    "<路径不可用>"
 END
 
 #endif    // Chinese (Simplified, China) resources

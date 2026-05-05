@@ -1,4 +1,4 @@
-#include <Windows.h>
+﻿#include <Windows.h>
 #include <commctrl.h>
 #include <shellapi.h>
 #include <strsafe.h>
@@ -6,6 +6,7 @@
 #include "AppShared.h"
 #include "GdiplusImage.h"
 #include "ServiceControl.h"
+#include "../UserDll/UserDll.h"
 
 static int AppMinInt(int left, int right)
 {
@@ -287,7 +288,7 @@ static int UiGetBottomContentHeight(HWND hwnd, int clientWidth)
     int warningHeight = UiMeasureWarningTextHeight(hwnd, availableWidth);
     int projectHeight = UiMeasureProjectTextHeight(hwnd, availableWidth);
 
-    return UiGetHeroTextGap(hwnd) + warningHeight + spacing + buttonHeight + spacing + projectHeight + margin;
+    return UiGetHeroTextGap(hwnd) + warningHeight + spacing + buttonHeight + spacing + buttonHeight + spacing + projectHeight + margin;
 }
 
 static void UiLoadHeroImage(void)
@@ -367,7 +368,7 @@ static void UiLayoutControls(int clientWidth)
     int projectTop;
     int projectHeight;
 
-    if (g_app.toggleButton == NULL)
+    if (g_app.toggleButton == NULL || g_app.trackedButton == NULL)
     {
         return;
     }
@@ -383,10 +384,11 @@ static void UiLayoutControls(int clientWidth)
     buttonWidth = AppMaxInt(minButtonWidth, AppMinInt(availableWidth, maxButtonWidth));
     buttonLeft = AppMaxInt(margin, (clientWidth - buttonWidth) / 2);
     buttonTop = UiGetHeroImageDrawSize(g_app.hwnd) + UiGetHeroTextGap(g_app.hwnd) + warningHeight + spacing;
-    projectTop = buttonTop + buttonHeight + spacing;
+    projectTop = buttonTop + buttonHeight + spacing + buttonHeight + spacing;
     projectHeight = UiMeasureProjectTextHeight(g_app.hwnd, availableWidth);
 
     MoveWindow(g_app.toggleButton, buttonLeft, buttonTop, buttonWidth, buttonHeight, TRUE);
+    MoveWindow(g_app.trackedButton, buttonLeft, buttonTop + buttonHeight + spacing, buttonWidth, buttonHeight, TRUE);
     if (g_app.projectLink != NULL)
     {
         MoveWindow(g_app.projectLink, margin, projectTop, availableWidth, projectHeight, TRUE);
@@ -561,6 +563,88 @@ static void UiHandleToggleButton(HWND hwnd)
     InvalidateRect(hwnd, NULL, FALSE);
 }
 
+static void UiHandleTrackedProcesses(HWND hwnd)
+{
+    WCHAR errorMessage[CLAWSANDBOX_ERROR_CAPACITY];
+    CLAWSANDBOX_TRACKED_PROCESS* processes;
+    DWORD capacity;
+    DWORD count;
+    DWORD result;
+    DWORD i;
+    WCHAR* text;
+    size_t textCount;
+    size_t offset;
+
+    capacity = 32;
+    processes = NULL;
+    for (;;)
+    {
+        processes = (CLAWSANDBOX_TRACKED_PROCESS*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, capacity * sizeof(CLAWSANDBOX_TRACKED_PROCESS));
+        if (processes == NULL)
+        {
+            UiShowFailure(hwnd, g_app.text.actionQueryManagedProcesses, L"Out of memory.");
+            return;
+        }
+
+        result = ClawSandboxQueryTrackedProcesses(processes, capacity, &count, errorMessage, ARRAYSIZE(errorMessage));
+        if (result != ERROR_MORE_DATA)
+        {
+            break;
+        }
+
+        HeapFree(GetProcessHeap(), 0, processes);
+        processes = NULL;
+        capacity = count;
+    }
+
+    if (result != ERROR_SUCCESS)
+    {
+        HeapFree(GetProcessHeap(), 0, processes);
+        UiShowFailure(hwnd, g_app.text.actionQueryManagedProcesses, errorMessage);
+        return;
+    }
+
+    textCount = 32768;
+    text = (WCHAR*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, textCount * sizeof(WCHAR));
+    if (text == NULL)
+    {
+        HeapFree(GetProcessHeap(), 0, processes);
+        UiShowFailure(hwnd, g_app.text.actionQueryManagedProcesses, L"Out of memory.");
+        return;
+    }
+
+    if (count == 0)
+    {
+        StringCchCopyW(text, textCount, UiTextOrFallback(g_app.text.noManagedProcess, L"No managed process."));
+    }
+    else
+    {
+        offset = 0;
+        for (i = 0; i < count && offset < textCount - 1; i++)
+        {
+            HRESULT hr;
+
+            hr = StringCchPrintfW(
+                text + offset,
+                textCount - offset,
+                L"%lu  %s\r\n",
+                processes[i].processId,
+                processes[i].imagePathAvailable ?
+                    processes[i].imagePath :
+                    UiTextOrFallback(g_app.text.pathUnavailable, L"<path unavailable>"));
+            if (FAILED(hr))
+            {
+                break;
+            }
+            offset += wcslen(text + offset);
+        }
+    }
+
+    MessageBoxW(hwnd, text, UiTextOrFallback(g_app.text.managedProcessesTitle, L"Managed processes"), MB_OK | MB_ICONINFORMATION);
+    HeapFree(GetProcessHeap(), 0, text);
+    HeapFree(GetProcessHeap(), 0, processes);
+}
+
 static LRESULT CALLBACK UiWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
@@ -587,6 +671,21 @@ static LRESULT CALLBACK UiWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPA
                 create->hInstance,
                 NULL);
             SendMessageW(g_app.toggleButton, WM_SETFONT, (WPARAM)UiGetPrimaryFont(), FALSE);
+
+            g_app.trackedButton = CreateWindowExW(
+                0,
+                WC_BUTTONW,
+                UiTextOrFallback(g_app.text.managedProcessesButton, L"Managed processes"),
+                WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
+                0,
+                0,
+                0,
+                0,
+                hwnd,
+                (HMENU)(INT_PTR)APP_ID_TRACKED_PROCESSES,
+                create->hInstance,
+                NULL);
+            SendMessageW(g_app.trackedButton, WM_SETFONT, (WPARAM)UiGetPrimaryFont(), FALSE);
 
             g_app.projectLink = CreateWindowExW(
                 0,
@@ -637,6 +736,10 @@ static LRESULT CALLBACK UiWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPA
             if (HIWORD(wParam) == BN_CLICKED && LOWORD(wParam) == APP_ID_TOGGLE_DRIVER)
             {
                 UiHandleToggleButton(hwnd);
+            }
+            if (HIWORD(wParam) == BN_CLICKED && LOWORD(wParam) == APP_ID_TRACKED_PROCESSES)
+            {
+                UiHandleTrackedProcesses(hwnd);
             }
             return 0;
 
@@ -690,6 +793,7 @@ static LRESULT CALLBACK UiWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPA
 
             g_app.hwnd = NULL;
             g_app.toggleButton = NULL;
+            g_app.trackedButton = NULL;
             g_app.projectLink = NULL;
             PostQuitMessage(0);
             return 0;

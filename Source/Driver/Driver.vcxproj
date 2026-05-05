@@ -111,6 +111,7 @@
     <FilesToPackage Include="$(TargetPath)" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Communication.c" />
     <ClCompile Include="Main.c" />
     <ClCompile Include="Rule.c" />
     <ClCompile Include="Rule.List.c" />
@@ -118,6 +119,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Driver.h" />
+    <ClInclude Include="..\Common\ClawSandboxProtocol.h" />
     <ClInclude Include="Version.h" />
   </ItemGroup>
   <ItemGroup>

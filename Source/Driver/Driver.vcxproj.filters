@@ -4,6 +4,7 @@
     <Inf Include="ClawSandbox.inf" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Communication.c" />
     <ClCompile Include="Main.c" />
     <ClCompile Include="Rule.c" />
     <ClCompile Include="Utils.c" />
@@ -11,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Driver.h" />
+    <ClInclude Include="..\Common\ClawSandboxProtocol.h" />
     <ClInclude Include="Version.h" />
   </ItemGroup>
   <ItemGroup>

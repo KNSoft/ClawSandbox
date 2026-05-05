@@ -99,6 +99,16 @@ static void FormatHresultMessage(HRESULT hr, WCHAR* buffer, size_t bufferCount)
     }
 }
 
+static DWORD Win32FromHresult(HRESULT hr)
+{
+    if (HRESULT_FACILITY(hr) == FACILITY_WIN32)
+    {
+        return HRESULT_CODE(hr);
+    }
+
+    return (DWORD)hr;
+}
+
 static DWORD ResultFromBool(BOOL success)
 {
     return success ? ERROR_SUCCESS : GetLastError();
@@ -790,4 +800,200 @@ DWORD ClawSandboxUninstallService(WCHAR* errorMessage, size_t errorMessageCount)
     }
 
     return ResultFromBool(UninstallDriver(errorMessage, errorMessageCount));
+}
+
+static DWORD QueryTrackedProcessIdsInternal(PDWORD* processIds, PDWORD count, WCHAR* errorMessage, size_t errorMessageCount)
+{
+    HANDLE port = INVALID_HANDLE_VALUE;
+    CLAWSANDBOX_MESSAGE_HEADER request;
+    PCLAWSANDBOX_TRACKED_PIDS_REPLY reply = NULL;
+    DWORD capacity = 32;
+    DWORD result = ERROR_SUCCESS;
+    HRESULT hr;
+
+    if (processIds == NULL || count == NULL)
+    {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        SetErrorMessage(errorMessage, errorMessageCount, L"Output parameter must not be NULL.");
+        return ERROR_INVALID_PARAMETER;
+    }
+
+    *processIds = NULL;
+    *count = 0;
+    ClearErrorMessage(errorMessage, errorMessageCount);
+
+    hr = FilterConnectCommunicationPort(CLAWSANDBOX_PORT_NAME, 0, NULL, 0, NULL, &port);
+    if (FAILED(hr))
+    {
+        result = Win32FromHresult(hr);
+        FormatHresultMessage(hr, errorMessage, errorMessageCount);
+        return result;
+    }
+
+    ZeroMemory(&request, sizeof(request));
+    request.Version = CLAWSANDBOX_PROTOCOL_VERSION;
+    request.Message = CLAWSANDBOX_MESSAGE_QUERY_TRACKED_PIDS;
+
+    for (;;)
+    {
+        DWORD replySize;
+        DWORD bytesReturned = 0;
+        DWORD copyCount;
+        PDWORD ids;
+
+        replySize = FIELD_OFFSET(CLAWSANDBOX_TRACKED_PIDS_REPLY, ProcessIds) +
+                    capacity * sizeof(ULONG_PTR);
+        reply = (PCLAWSANDBOX_TRACKED_PIDS_REPLY)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, replySize);
+        if (reply == NULL)
+        {
+            result = ERROR_NOT_ENOUGH_MEMORY;
+            break;
+        }
+
+        hr = FilterSendMessage(port, &request, sizeof(request), reply, replySize, &bytesReturned);
+        if (FAILED(hr) && reply->Count <= reply->Capacity)
+        {
+            result = Win32FromHresult(hr);
+            FormatHresultMessage(hr, errorMessage, errorMessageCount);
+            break;
+        }
+
+        if (reply->Count > reply->Capacity)
+        {
+            capacity = reply->Count;
+            HeapFree(GetProcessHeap(), 0, reply);
+            reply = NULL;
+            continue;
+        }
+
+        copyCount = reply->Count;
+        ids = NULL;
+        if (copyCount != 0)
+        {
+            DWORD i;
+
+            ids = (PDWORD)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, copyCount * sizeof(DWORD));
+            if (ids == NULL)
+            {
+                result = ERROR_NOT_ENOUGH_MEMORY;
+                break;
+            }
+
+            for (i = 0; i < copyCount; i++)
+            {
+                ids[i] = (DWORD)reply->ProcessIds[i];
+            }
+        }
+
+        *processIds = ids;
+        *count = copyCount;
+        result = ERROR_SUCCESS;
+        break;
+    }
+
+    if (reply != NULL)
+    {
+        HeapFree(GetProcessHeap(), 0, reply);
+    }
+    if (port != INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(port);
+    }
+
+    if (result != ERROR_SUCCESS && errorMessage != NULL && errorMessageCount != 0 && errorMessage[0] == L'\0')
+    {
+        FormatWin32Message(result, errorMessage, errorMessageCount);
+    }
+    return result;
+}
+
+DWORD ClawSandboxQueryTrackedProcessIds(DWORD* processIds, DWORD capacity, DWORD* count, WCHAR* errorMessage, size_t errorMessageCount)
+{
+    PDWORD localProcessIds = NULL;
+    DWORD localCount = 0;
+    DWORD result;
+
+    if (count == NULL || (capacity != 0 && processIds == NULL))
+    {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        SetErrorMessage(errorMessage, errorMessageCount, L"Output parameter must not be NULL.");
+        return ERROR_INVALID_PARAMETER;
+    }
+
+    result = QueryTrackedProcessIdsInternal(&localProcessIds, &localCount, errorMessage, errorMessageCount);
+    if (result != ERROR_SUCCESS)
+    {
+        return result;
+    }
+
+    *count = localCount;
+    if (localCount > capacity)
+    {
+        HeapFree(GetProcessHeap(), 0, localProcessIds);
+        SetLastError(ERROR_MORE_DATA);
+        SetErrorMessage(errorMessage, errorMessageCount, L"The output buffer is too small.");
+        return ERROR_MORE_DATA;
+    }
+
+    if (localCount != 0)
+    {
+        CopyMemory(processIds, localProcessIds, localCount * sizeof(DWORD));
+    }
+
+    HeapFree(GetProcessHeap(), 0, localProcessIds);
+    return ERROR_SUCCESS;
+}
+
+DWORD ClawSandboxQueryTrackedProcesses(CLAWSANDBOX_TRACKED_PROCESS* processes, DWORD capacity, DWORD* count, WCHAR* errorMessage, size_t errorMessageCount)
+{
+    PDWORD processIds = NULL;
+    DWORD localCount = 0;
+    DWORD result;
+    DWORD i;
+
+    if (count == NULL || (capacity != 0 && processes == NULL))
+    {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        SetErrorMessage(errorMessage, errorMessageCount, L"Output parameter must not be NULL.");
+        return ERROR_INVALID_PARAMETER;
+    }
+
+    result = QueryTrackedProcessIdsInternal(&processIds, &localCount, errorMessage, errorMessageCount);
+    if (result != ERROR_SUCCESS)
+    {
+        return result;
+    }
+
+    *count = localCount;
+    if (localCount > capacity)
+    {
+        HeapFree(GetProcessHeap(), 0, processIds);
+        SetLastError(ERROR_MORE_DATA);
+        SetErrorMessage(errorMessage, errorMessageCount, L"The output buffer is too small.");
+        return ERROR_MORE_DATA;
+    }
+
+    for (i = 0; i < localCount; i++)
+    {
+        HANDLE processHandle;
+        DWORD pathCapacity = CLAWSANDBOX_PROCESS_PATH_CAPACITY;
+
+        ZeroMemory(&processes[i], sizeof(processes[i]));
+        processes[i].processId = processIds[i];
+
+        processHandle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, processIds[i]);
+        if (processHandle == NULL)
+        {
+            continue;
+        }
+
+        if (QueryFullProcessImageNameW(processHandle, 0, processes[i].imagePath, &pathCapacity))
+        {
+            processes[i].imagePathAvailable = TRUE;
+        }
+        CloseHandle(processHandle);
+    }
+
+    HeapFree(GetProcessHeap(), 0, processIds);
+    return ERROR_SUCCESS;
 }
