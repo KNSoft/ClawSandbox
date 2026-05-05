@@ -3,4 +3,7 @@
   <ItemGroup>
     <ClCompile Include="Main.c" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="UserDll.h" />
+  </ItemGroup>
 </Project>

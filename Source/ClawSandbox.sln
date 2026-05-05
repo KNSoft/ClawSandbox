@@ -9,6 +9,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Launcher", "Launcher\Launch
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UserDll", "UserDll\UserDll.vcxproj", "{2A48ABEE-B656-49E7-AA2C-6BF15CABB84C}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CLI", "CLI\CLI.vcxproj", "{075AFCCC-8D72-46B7-B79B-E153A6BB9AB7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|ARM64 = Debug|ARM64
@@ -45,6 +47,14 @@ Global
 		{2A48ABEE-B656-49E7-AA2C-6BF15CABB84C}.Release|ARM64.Build.0 = Release|x64
 		{2A48ABEE-B656-49E7-AA2C-6BF15CABB84C}.Release|x64.ActiveCfg = Release|x64
 		{2A48ABEE-B656-49E7-AA2C-6BF15CABB84C}.Release|x64.Build.0 = Release|x64
+		{075AFCCC-8D72-46B7-B79B-E153A6BB9AB7}.Debug|ARM64.ActiveCfg = Debug|x64
+		{075AFCCC-8D72-46B7-B79B-E153A6BB9AB7}.Debug|ARM64.Build.0 = Debug|x64
+		{075AFCCC-8D72-46B7-B79B-E153A6BB9AB7}.Debug|x64.ActiveCfg = Debug|x64
+		{075AFCCC-8D72-46B7-B79B-E153A6BB9AB7}.Debug|x64.Build.0 = Debug|x64
+		{075AFCCC-8D72-46B7-B79B-E153A6BB9AB7}.Release|ARM64.ActiveCfg = Release|x64
+		{075AFCCC-8D72-46B7-B79B-E153A6BB9AB7}.Release|ARM64.Build.0 = Release|x64
+		{075AFCCC-8D72-46B7-B79B-E153A6BB9AB7}.Release|x64.ActiveCfg = Release|x64
+		{075AFCCC-8D72-46B7-B79B-E153A6BB9AB7}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
