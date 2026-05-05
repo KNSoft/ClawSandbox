@@ -140,7 +140,8 @@ RuleListMatchClawTypeCreate(
 
     for (ULONG i = 0; i < ARRAYSIZE(g_aClawTypes); i++)
     {
-        if (g_aClawTypes[i].ProcessTrackCallback(CreateInfo))
+        if (g_aClawTypes[i].ProcessTrackCallback(CreateInfo) &&
+            RuleIsClawTypeAllowed(&g_aClawTypes[i]))
         {
             return &g_aClawTypes[i];
         }
@@ -161,7 +162,8 @@ RuleListMatchClawTypeImageName(
     for (ULONG i = 0; i < ARRAYSIZE(g_aClawTypes); i++)
     {
         if (g_aClawTypes[i].SpecificProcessName != NULL &&
-            PathEndsWithComponentInsensitive(ImageName, g_aClawTypes[i].SpecificProcessName))
+            PathEndsWithComponentInsensitive(ImageName, g_aClawTypes[i].SpecificProcessName) &&
+            RuleIsClawTypeAllowed(&g_aClawTypes[i]))
         {
             return &g_aClawTypes[i];
         }

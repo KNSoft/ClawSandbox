@@ -9,8 +9,9 @@ static const WCHAR kServiceDescription[] = L"ClawSandbox file activity minifilte
 static const WCHAR kServiceGroup[] = L"FSFilter Activity Monitor";
 static const WCHAR kDefaultInstance[] = L"ClawSandbox Instance";
 static const WCHAR kDefaultAltitude[] = L"370131";
-static const DWORD kSupportedFeatures = 3;
+static const DWORD kSupportedFeatures = 7;
 static const DWORD kSelfProtection = 0;
+static const WCHAR kClawType[] = L"";
 static HMODULE ModuleHandle;
 
 BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved)
@@ -359,6 +360,12 @@ static BOOL ConfigureServiceRegistry(WCHAR* errorMessage, size_t errorMessageCou
         return FALSE;
     }
 
+    if (!WriteStringValue(HKEY_LOCAL_MACHINE, parametersKey, L"ClawType", kClawType))
+    {
+        FormatWin32Message(GetLastError(), errorMessage, errorMessageCount);
+        return FALSE;
+    }
+
     return TRUE;
 }
 
@@ -583,7 +590,9 @@ DWORD ClawSandboxSetOptions(const CLAWSANDBOX_OPTIONS* options, WCHAR* errorMess
 {
     CLAWSANDBOX_SERVICE_STATE state;
     const WCHAR parametersKey[] = L"SYSTEM\\CurrentControlSet\\Services\\ClawSandbox\\Parameters";
-    const DWORD supportedFlags = CLAWSANDBOX_OPTION_SELF_PROTECTION | CLAWSANDBOX_OPTION_FS_WHITE_LIST;
+    const DWORD supportedFlags = CLAWSANDBOX_OPTION_SELF_PROTECTION |
+                                 CLAWSANDBOX_OPTION_FS_WHITE_LIST |
+                                 CLAWSANDBOX_OPTION_CLAW_TYPE;
 
     ClearErrorMessage(errorMessage, errorMessageCount);
     if (options == NULL)
@@ -626,6 +635,13 @@ DWORD ClawSandboxSetOptions(const CLAWSANDBOX_OPTIONS* options, WCHAR* errorMess
         return GetLastError();
     }
 
+    if ((options->flags & CLAWSANDBOX_OPTION_CLAW_TYPE) != 0 &&
+        !WriteStringValue(HKEY_LOCAL_MACHINE, parametersKey, L"ClawType", options->clawType != NULL ? options->clawType : L""))
+    {
+        FormatWin32Message(GetLastError(), errorMessage, errorMessageCount);
+        return GetLastError();
+    }
+
     return ERROR_SUCCESS;
 }
 
@@ -646,6 +662,16 @@ DWORD ClawSandboxSetFsWhiteList(PCWSTR fsWhiteListMultiSz, WCHAR* errorMessage, 
     ZeroMemory(&options, sizeof(options));
     options.flags = CLAWSANDBOX_OPTION_FS_WHITE_LIST;
     options.fsWhiteListMultiSz = fsWhiteListMultiSz;
+    return ClawSandboxSetOptions(&options, errorMessage, errorMessageCount);
+}
+
+DWORD ClawSandboxSetClawType(PCWSTR clawType, WCHAR* errorMessage, size_t errorMessageCount)
+{
+    CLAWSANDBOX_OPTIONS options;
+
+    ZeroMemory(&options, sizeof(options));
+    options.flags = CLAWSANDBOX_OPTION_CLAW_TYPE;
+    options.clawType = clawType;
     return ClawSandboxSetOptions(&options, errorMessage, errorMessageCount);
 }
 

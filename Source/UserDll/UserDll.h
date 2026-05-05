@@ -12,6 +12,7 @@ extern "C" {
 #define CLAWSANDBOX_PROCESS_PATH_CAPACITY 1024
 #define CLAWSANDBOX_OPTION_SELF_PROTECTION 0x00000001
 #define CLAWSANDBOX_OPTION_FS_WHITE_LIST 0x00000002
+#define CLAWSANDBOX_OPTION_CLAW_TYPE 0x00000004
 
 #ifdef CLAWSANDBOX_USERDLL_EXPORTS
 #define CLAWSANDBOX_API __declspec(dllexport)
@@ -34,6 +35,7 @@ typedef struct CLAWSANDBOX_OPTIONS
     DWORD flags;
     BOOL selfProtection;
     PCWSTR fsWhiteListMultiSz;
+    PCWSTR clawType;
 } CLAWSANDBOX_OPTIONS;
 
 typedef struct CLAWSANDBOX_TRACKED_PROCESS
@@ -48,6 +50,7 @@ CLAWSANDBOX_API DWORD ClawSandboxInstallService(wchar_t* errorMessage, size_t er
 CLAWSANDBOX_API DWORD ClawSandboxSetOptions(const CLAWSANDBOX_OPTIONS* options, wchar_t* errorMessage, size_t errorMessageCount);
 CLAWSANDBOX_API DWORD ClawSandboxSetSelfProtection(BOOL enabled, wchar_t* errorMessage, size_t errorMessageCount);
 CLAWSANDBOX_API DWORD ClawSandboxSetFsWhiteList(PCWSTR fsWhiteListMultiSz, wchar_t* errorMessage, size_t errorMessageCount);
+CLAWSANDBOX_API DWORD ClawSandboxSetClawType(PCWSTR clawType, wchar_t* errorMessage, size_t errorMessageCount);
 CLAWSANDBOX_API DWORD ClawSandboxStartService(wchar_t* errorMessage, size_t errorMessageCount);
 CLAWSANDBOX_API DWORD ClawSandboxStopService(wchar_t* errorMessage, size_t errorMessageCount);
 CLAWSANDBOX_API DWORD ClawSandboxUninstallService(wchar_t* errorMessage, size_t errorMessageCount);

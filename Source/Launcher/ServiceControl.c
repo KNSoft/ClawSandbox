@@ -101,6 +101,21 @@ DWORD ServiceControlUninstall(WCHAR* errorMessage, size_t errorMessageCount)
     return ClawSandboxUninstallService(errorMessage, errorMessageCount);
 }
 
+DWORD ServiceControlSetSelfProtection(BOOL enabled, WCHAR* errorMessage, size_t errorMessageCount)
+{
+    return ClawSandboxSetSelfProtection(enabled, errorMessage, errorMessageCount);
+}
+
+DWORD ServiceControlSetFsWhiteList(const WCHAR* fsWhiteListMultiSz, WCHAR* errorMessage, size_t errorMessageCount)
+{
+    return ClawSandboxSetFsWhiteList(fsWhiteListMultiSz, errorMessage, errorMessageCount);
+}
+
+DWORD ServiceControlSetClawType(const WCHAR* clawType, WCHAR* errorMessage, size_t errorMessageCount)
+{
+    return ClawSandboxSetClawType(clawType, errorMessage, errorMessageCount);
+}
+
 DWORD ServiceControlCleanupOnExit(BOOL installedByLauncher, WCHAR* errorMessage, size_t errorMessageCount)
 {
     DWORD result;

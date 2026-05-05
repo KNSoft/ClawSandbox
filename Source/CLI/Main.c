@@ -91,6 +91,7 @@ static void PrintUsage(void)
         L"  ClawSandbox uninstall\n"
         L"  ClawSandbox self-protection on|off\n"
         L"  ClawSandbox fs-whitelist [path ...]\n"
+        L"  ClawSandbox claw-type [OpenClaw|LobsterAI|EasyClaw|AutoClaw]\n"
         L"  ClawSandbox tracked-pids\n"
         L"  ClawSandbox tracked\n");
 }
@@ -285,6 +286,26 @@ static DWORD SetFsWhiteList(int count, wchar_t** values)
     return ERROR_SUCCESS;
 }
 
+static DWORD SetClawType(PCWSTR value)
+{
+    WCHAR errorMessage[CLAWSANDBOX_ERROR_CAPACITY];
+    DWORD result;
+
+    result = InitializeForMutation();
+    if (result != ERROR_SUCCESS)
+    {
+        return result;
+    }
+
+    result = ClawSandboxSetClawType(value, errorMessage, ARRAYSIZE(errorMessage));
+    if (result != ERROR_SUCCESS)
+    {
+        return PrintError(result, errorMessage);
+    }
+
+    return ERROR_SUCCESS;
+}
+
 static DWORD QueryTrackedProcessIds(void)
 {
     WCHAR errorMessage[CLAWSANDBOX_ERROR_CAPACITY];
@@ -421,6 +442,10 @@ int wmain(int argc, wchar_t** argv)
     else if (EqualCommand(argv[1], L"fs-whitelist"))
     {
         result = SetFsWhiteList(argc - 2, argv + 2);
+    }
+    else if (EqualCommand(argv[1], L"claw-type") && argc <= 3)
+    {
+        result = SetClawType(argc == 3 ? argv[2] : L"");
     }
     else if (EqualCommand(argv[1], L"tracked-pids"))
     {

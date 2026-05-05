@@ -31,12 +31,19 @@
 #define IDS_ACTION_QUERY_MANAGED_PROCESSES 2025
 #define IDS_NO_MANAGED_PROCESS          2026
 #define IDS_PATH_UNAVAILABLE            2027
+#define IDS_SELF_PROTECTION             2028
+#define IDS_CLAW_TYPE_ALL               2029
+#define IDS_FS_WHITELIST_PLACEHOLDER    2030
+#define IDS_APPLY_OPTIONS               2031
+#define IDS_ACTION_APPLY_OPTIONS        2032
+#define IDS_BROWSE_FOLDER               2033
+#define IDS_ACTION_BROWSE_FOLDER        2034
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        2028
+#define _APS_NEXT_RESOURCE_VALUE        2035
 #define _APS_NEXT_COMMAND_VALUE         40001
 #define _APS_NEXT_CONTROL_VALUE         1000
 #define _APS_NEXT_SYMED_VALUE           101

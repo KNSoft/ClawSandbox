@@ -171,14 +171,35 @@ static OBJECT_ATTRIBUTES Attributes = RTL_CONSTANT_OBJECT_ATTRIBUTES(&SystemRoot
 static CONST UNICODE_STRING ParametersSubKey = RTL_CONSTANT_STRING(L"\\Parameters");
 static CONST UNICODE_STRING FsWhiteListValueName = RTL_CONSTANT_STRING(L"FSWhiteList");
 static CONST UNICODE_STRING SelfProtectionValueName = RTL_CONSTANT_STRING(L"SelfProtection");
+static CONST UNICODE_STRING ClawTypeValueName = RTL_CONSTANT_STRING(L"ClawType");
 static PWCHAR FsWhiteListBuffer = NULL;
 static ULONG FsWhiteListBufferLength;
+static UNICODE_STRING ClawTypeName;
 static BOOLEAN SelfProtectionEnabled = FALSE;
 
 BOOLEAN
 RuleIsSelfProtectionEnabled(VOID)
 {
     return SelfProtectionEnabled;
+}
+
+BOOLEAN
+RuleIsClawTypeAllowed(
+    _In_ PRULE_CLAW_TYPE ClawType)
+{
+    UNICODE_STRING Name;
+
+    if (ClawType == NULL)
+    {
+        return FALSE;
+    }
+    if (ClawTypeName.Length == 0)
+    {
+        return TRUE;
+    }
+
+    RtlInitUnicodeString(&Name, ClawType->Name);
+    return RtlEqualUnicodeString(&ClawTypeName, &Name, TRUE);
 }
 
 static
@@ -190,6 +211,17 @@ RuleFreeFsWhiteList(VOID)
         ExFreePoolWithTag(FsWhiteListBuffer, CLAWSANDBOX_TAG);
         FsWhiteListBuffer = NULL;
         FsWhiteListBufferLength = 0;
+    }
+}
+
+static
+VOID
+RuleFreeClawType(VOID)
+{
+    if (ClawTypeName.Buffer != NULL)
+    {
+        ExFreePoolWithTag(ClawTypeName.Buffer, CLAWSANDBOX_TAG);
+        RtlZeroMemory(&ClawTypeName, sizeof(ClawTypeName));
     }
 }
 
@@ -303,6 +335,73 @@ RuleLoadParameterValue(
     }
 
     *ValueInformation = LocalValueInformation;
+    return STATUS_SUCCESS;
+}
+
+static
+NTSTATUS
+RuleLoadStringParameter(
+    _In_ PCUNICODE_STRING RegistryPath,
+    _In_ PCUNICODE_STRING ValueName,
+    _Out_ PUNICODE_STRING Value)
+{
+    NTSTATUS Status;
+    PKEY_VALUE_PARTIAL_INFORMATION ValueInformation;
+    PWCHAR ValueBuffer;
+    ULONG ValueLength;
+
+    if (Value == NULL)
+    {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    RtlZeroMemory(Value, sizeof(*Value));
+
+    Status = RuleLoadParameterValue(RegistryPath, ValueName, &ValueInformation);
+    if (!NT_SUCCESS(Status))
+    {
+        return Status;
+    }
+
+    if (ValueInformation->Type != REG_SZ || (ValueInformation->DataLength % sizeof(WCHAR)) != 0)
+    {
+        ExFreePoolWithTag(ValueInformation, CLAWSANDBOX_TAG);
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    ValueLength = ValueInformation->DataLength;
+    if (ValueLength >= sizeof(WCHAR) &&
+        ((PWCHAR)ValueInformation->Data)[ValueLength / sizeof(WCHAR) - 1] == UNICODE_NULL)
+    {
+        ValueLength -= sizeof(WCHAR);
+    }
+    if (ValueLength == 0)
+    {
+        ExFreePoolWithTag(ValueInformation, CLAWSANDBOX_TAG);
+        return STATUS_SUCCESS;
+    }
+    if (ValueLength + sizeof(WCHAR) > MAXUSHORT)
+    {
+        ExFreePoolWithTag(ValueInformation, CLAWSANDBOX_TAG);
+        return STATUS_NAME_TOO_LONG;
+    }
+
+    ValueBuffer = (PWCHAR)ExAllocatePool2(POOL_FLAG_NON_PAGED,
+                                          ValueLength + sizeof(WCHAR),
+                                          CLAWSANDBOX_TAG);
+    if (ValueBuffer == NULL)
+    {
+        ExFreePoolWithTag(ValueInformation, CLAWSANDBOX_TAG);
+        return STATUS_INSUFFICIENT_RESOURCES;
+    }
+
+    RtlCopyMemory(ValueBuffer, ValueInformation->Data, ValueLength);
+    ValueBuffer[ValueLength / sizeof(WCHAR)] = UNICODE_NULL;
+    Value->Buffer = ValueBuffer;
+    Value->Length = (USHORT)ValueLength;
+    Value->MaximumLength = (USHORT)(ValueLength + sizeof(WCHAR));
+
+    ExFreePoolWithTag(ValueInformation, CLAWSANDBOX_TAG);
     return STATUS_SUCCESS;
 }
 
@@ -509,6 +608,9 @@ RuleInitialize(
     }
     UNREFERENCED_PARAMETER(Status);
 
+    Status = RuleLoadStringParameter(RegistryPath, &ClawTypeValueName, &ClawTypeName);
+    UNREFERENCED_PARAMETER(Status);
+
     return STATUS_SUCCESS;
 }
 
@@ -545,6 +647,7 @@ RuleUninitialize(VOID)
     }
 
     RuleFreeFsWhiteList();
+    RuleFreeClawType();
     SelfProtectionEnabled = FALSE;
     FltDeletePushLock(&TrackedProcessLock);
 }

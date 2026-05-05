@@ -1,5 +1,6 @@
 ﻿#include <Windows.h>
 #include <commctrl.h>
+#include <shobjidl.h>
 #include <shellapi.h>
 #include <strsafe.h>
 
@@ -256,6 +257,11 @@ static int UiGetHeroTextGap(HWND hwnd)
     return AppScaleForDpi(4, AppGetWindowDpi(hwnd));
 }
 
+static int UiGetOptionControlHeight(HWND hwnd)
+{
+    return AppScaleForDpi(28, AppGetWindowDpi(hwnd));
+}
+
 static int UiGetHeroImageDrawSize(HWND hwnd)
 {
     UINT imageWidth;
@@ -284,11 +290,19 @@ static int UiGetBottomContentHeight(HWND hwnd, int clientWidth)
     int margin = AppScaleForDpi(APP_BASE_MARGIN, dpi);
     int spacing = AppScaleForDpi(APP_BASE_CONTROL_SPACING, dpi);
     int buttonHeight = AppScaleForDpi(APP_BASE_BUTTON_HEIGHT, dpi);
+    int optionHeight = UiGetOptionControlHeight(hwnd);
     int availableWidth = AppMaxInt(1, clientWidth - (margin * 2));
     int warningHeight = UiMeasureWarningTextHeight(hwnd, availableWidth);
     int projectHeight = UiMeasureProjectTextHeight(hwnd, availableWidth);
 
-    return UiGetHeroTextGap(hwnd) + warningHeight + spacing + buttonHeight + spacing + buttonHeight + spacing + projectHeight + margin;
+    return UiGetHeroTextGap(hwnd) + warningHeight +
+           spacing + optionHeight +
+           spacing + optionHeight +
+           spacing + optionHeight +
+           spacing + buttonHeight +
+           spacing + buttonHeight +
+           spacing + buttonHeight +
+           spacing + projectHeight + margin;
 }
 
 static void UiLoadHeroImage(void)
@@ -358,17 +372,28 @@ static void UiLayoutControls(int clientWidth)
     int margin;
     int spacing;
     int buttonHeight;
+    int optionHeight;
     int availableWidth;
     int warningHeight;
     int minButtonWidth;
     int maxButtonWidth;
     int buttonWidth;
     int buttonLeft;
+    int browseWidth;
+    int editWidth;
+    int settingsTop;
+    int fsWhiteListTop;
     int buttonTop;
     int projectTop;
     int projectHeight;
 
-    if (g_app.toggleButton == NULL || g_app.trackedButton == NULL)
+    if (g_app.toggleButton == NULL ||
+        g_app.trackedButton == NULL ||
+        g_app.selfProtectionCheckBox == NULL ||
+        g_app.clawTypeComboBox == NULL ||
+        g_app.fsWhiteListEdit == NULL ||
+        g_app.browseFolderButton == NULL ||
+        g_app.applyOptionsButton == NULL)
     {
         return;
     }
@@ -377,18 +402,34 @@ static void UiLayoutControls(int clientWidth)
     margin = AppScaleForDpi(APP_BASE_MARGIN, dpi);
     spacing = AppScaleForDpi(APP_BASE_CONTROL_SPACING, dpi);
     buttonHeight = AppScaleForDpi(APP_BASE_BUTTON_HEIGHT, dpi);
+    optionHeight = UiGetOptionControlHeight(g_app.hwnd);
     availableWidth = AppMaxInt(1, clientWidth - (margin * 2));
     warningHeight = UiMeasureWarningTextHeight(g_app.hwnd, availableWidth);
     minButtonWidth = AppScaleForDpi(APP_BASE_MIN_BUTTON_WIDTH, dpi);
     maxButtonWidth = AppScaleForDpi(APP_BASE_MAX_BUTTON_WIDTH, dpi);
     buttonWidth = AppMaxInt(minButtonWidth, AppMinInt(availableWidth, maxButtonWidth));
     buttonLeft = AppMaxInt(margin, (clientWidth - buttonWidth) / 2);
-    buttonTop = UiGetHeroImageDrawSize(g_app.hwnd) + UiGetHeroTextGap(g_app.hwnd) + warningHeight + spacing;
-    projectTop = buttonTop + buttonHeight + spacing + buttonHeight + spacing;
+    browseWidth = AppMinInt(AppScaleForDpi(120, dpi), availableWidth);
+    editWidth = AppMaxInt(1, availableWidth - browseWidth - spacing);
+    settingsTop = UiGetHeroImageDrawSize(g_app.hwnd) +
+                  UiGetHeroTextGap(g_app.hwnd) +
+                  warningHeight +
+                  spacing;
+    fsWhiteListTop = settingsTop + optionHeight + spacing + optionHeight + spacing;
+    buttonTop = settingsTop +
+                optionHeight + spacing +
+                optionHeight + spacing +
+                optionHeight + spacing;
+    projectTop = buttonTop + buttonHeight + spacing + buttonHeight + spacing + buttonHeight + spacing;
     projectHeight = UiMeasureProjectTextHeight(g_app.hwnd, availableWidth);
 
-    MoveWindow(g_app.toggleButton, buttonLeft, buttonTop, buttonWidth, buttonHeight, TRUE);
-    MoveWindow(g_app.trackedButton, buttonLeft, buttonTop + buttonHeight + spacing, buttonWidth, buttonHeight, TRUE);
+    MoveWindow(g_app.selfProtectionCheckBox, margin, settingsTop, availableWidth, optionHeight, TRUE);
+    MoveWindow(g_app.clawTypeComboBox, margin, settingsTop + optionHeight + spacing, availableWidth, optionHeight * 6, TRUE);
+    MoveWindow(g_app.fsWhiteListEdit, margin, fsWhiteListTop, editWidth, optionHeight, TRUE);
+    MoveWindow(g_app.browseFolderButton, margin + editWidth + spacing, fsWhiteListTop, browseWidth, optionHeight, TRUE);
+    MoveWindow(g_app.applyOptionsButton, buttonLeft, buttonTop, buttonWidth, buttonHeight, TRUE);
+    MoveWindow(g_app.toggleButton, buttonLeft, buttonTop + buttonHeight + spacing, buttonWidth, buttonHeight, TRUE);
+    MoveWindow(g_app.trackedButton, buttonLeft, buttonTop + buttonHeight + spacing + buttonHeight + spacing, buttonWidth, buttonHeight, TRUE);
     if (g_app.projectLink != NULL)
     {
         MoveWindow(g_app.projectLink, margin, projectTop, availableWidth, projectHeight, TRUE);
@@ -563,6 +604,177 @@ static void UiHandleToggleButton(HWND hwnd)
     InvalidateRect(hwnd, NULL, FALSE);
 }
 
+static PWSTR UiBuildFsWhiteListMultiSz(HWND hwnd)
+{
+    int length;
+    PWSTR buffer;
+    int i;
+
+    length = GetWindowTextLengthW(g_app.fsWhiteListEdit);
+    buffer = (PWSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, ((size_t)length + 2) * sizeof(WCHAR));
+    if (buffer == NULL)
+    {
+        UiShowFailure(hwnd, g_app.text.actionApplyOptions, L"Out of memory.");
+        return NULL;
+    }
+
+    if (length != 0)
+    {
+        GetWindowTextW(g_app.fsWhiteListEdit, buffer, length + 1);
+        for (i = 0; i < length; i++)
+        {
+            if (buffer[i] == L';')
+            {
+                buffer[i] = L'\0';
+            }
+        }
+    }
+
+    buffer[length + 1] = L'\0';
+    return buffer;
+}
+
+static void UiHandleApplyOptions(HWND hwnd)
+{
+    WCHAR errorMessage[CLAWSANDBOX_ERROR_CAPACITY];
+    WCHAR clawType[64];
+    PWSTR fsWhiteListMultiSz;
+    CLAWSANDBOX_OPTIONS options;
+    LRESULT selection;
+    DWORD result;
+
+    fsWhiteListMultiSz = UiBuildFsWhiteListMultiSz(hwnd);
+    if (fsWhiteListMultiSz == NULL)
+    {
+        return;
+    }
+
+    clawType[0] = L'\0';
+    selection = SendMessageW(g_app.clawTypeComboBox, CB_GETCURSEL, 0, 0);
+    if (selection > 0)
+    {
+        SendMessageW(g_app.clawTypeComboBox, CB_GETLBTEXT, (WPARAM)selection, (LPARAM)clawType);
+    }
+
+    ZeroMemory(&options, sizeof(options));
+    options.flags = CLAWSANDBOX_OPTION_SELF_PROTECTION |
+                    CLAWSANDBOX_OPTION_FS_WHITE_LIST |
+                    CLAWSANDBOX_OPTION_CLAW_TYPE;
+    options.selfProtection = SendMessageW(g_app.selfProtectionCheckBox, BM_GETCHECK, 0, 0) == BST_CHECKED;
+    options.fsWhiteListMultiSz = fsWhiteListMultiSz;
+    options.clawType = clawType;
+
+    result = ServiceControlInitialize(errorMessage, ARRAYSIZE(errorMessage));
+    if (result == ERROR_SUCCESS)
+    {
+        result = ClawSandboxSetOptions(&options, errorMessage, ARRAYSIZE(errorMessage));
+    }
+
+    HeapFree(GetProcessHeap(), 0, fsWhiteListMultiSz);
+    if (result != ERROR_SUCCESS)
+    {
+        UiShowFailure(hwnd, g_app.text.actionApplyOptions, errorMessage);
+    }
+}
+
+static void UiAppendFsWhiteListFolder(PCWSTR folder)
+{
+    int length;
+
+    if (folder == NULL || folder[0] == L'\0')
+    {
+        return;
+    }
+
+    length = GetWindowTextLengthW(g_app.fsWhiteListEdit);
+    if (length > 0)
+    {
+        SendMessageW(g_app.fsWhiteListEdit, EM_SETSEL, (WPARAM)length, (LPARAM)length);
+        SendMessageW(g_app.fsWhiteListEdit, EM_REPLACESEL, TRUE, (LPARAM)L";");
+    }
+
+    SendMessageW(g_app.fsWhiteListEdit, EM_SETSEL, (WPARAM)-1, (LPARAM)-1);
+    SendMessageW(g_app.fsWhiteListEdit, EM_REPLACESEL, TRUE, (LPARAM)folder);
+}
+
+static void UiHandleBrowseFolder(HWND hwnd)
+{
+    IFileDialog* dialog;
+    IShellItem* item;
+    PWSTR folder;
+    FILEOPENDIALOGOPTIONS options;
+    HRESULT result;
+    BOOL coInitialized;
+
+    dialog = NULL;
+    item = NULL;
+    folder = NULL;
+    coInitialized = FALSE;
+
+    result = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+    if (SUCCEEDED(result))
+    {
+        coInitialized = TRUE;
+    }
+    else
+    {
+        UiShowFailure(hwnd, g_app.text.actionBrowseFolder, L"Failed to initialize COM.");
+        return;
+    }
+
+    result = CoCreateInstance(&CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER, &IID_IFileDialog, (void**)&dialog);
+    if (SUCCEEDED(result))
+    {
+        options = 0;
+        result = dialog->lpVtbl->GetOptions(dialog, &options);
+    }
+    if (SUCCEEDED(result))
+    {
+        result = dialog->lpVtbl->SetOptions(dialog, options | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST);
+    }
+    if (SUCCEEDED(result))
+    {
+        result = dialog->lpVtbl->SetTitle(dialog, UiTextOrFallback(g_app.text.actionBrowseFolder, L"Browse folder"));
+    }
+    if (SUCCEEDED(result))
+    {
+        result = dialog->lpVtbl->Show(dialog, hwnd);
+    }
+    if (SUCCEEDED(result))
+    {
+        result = dialog->lpVtbl->GetResult(dialog, &item);
+    }
+    if (SUCCEEDED(result))
+    {
+        result = item->lpVtbl->GetDisplayName(item, SIGDN_FILESYSPATH, &folder);
+    }
+    if (SUCCEEDED(result))
+    {
+        UiAppendFsWhiteListFolder(folder);
+    }
+    else if (result != HRESULT_FROM_WIN32(ERROR_CANCELLED))
+    {
+        UiShowFailure(hwnd, g_app.text.actionBrowseFolder, L"Failed to browse folder.");
+    }
+
+    if (folder != NULL)
+    {
+        CoTaskMemFree(folder);
+    }
+    if (item != NULL)
+    {
+        item->lpVtbl->Release(item);
+    }
+    if (dialog != NULL)
+    {
+        dialog->lpVtbl->Release(dialog);
+    }
+    if (coInitialized)
+    {
+        CoUninitialize();
+    }
+}
+
 static void UiHandleTrackedProcesses(HWND hwnd)
 {
     WCHAR errorMessage[CLAWSANDBOX_ERROR_CAPACITY];
@@ -687,6 +899,88 @@ static LRESULT CALLBACK UiWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPA
                 NULL);
             SendMessageW(g_app.trackedButton, WM_SETFONT, (WPARAM)UiGetPrimaryFont(), FALSE);
 
+            g_app.selfProtectionCheckBox = CreateWindowExW(
+                0,
+                WC_BUTTONW,
+                UiTextOrFallback(g_app.text.selfProtection, L"Self protection"),
+                WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_AUTOCHECKBOX,
+                0,
+                0,
+                0,
+                0,
+                hwnd,
+                (HMENU)(INT_PTR)APP_ID_SELF_PROTECTION,
+                create->hInstance,
+                NULL);
+            SendMessageW(g_app.selfProtectionCheckBox, WM_SETFONT, (WPARAM)UiGetPrimaryFont(), FALSE);
+
+            g_app.clawTypeComboBox = CreateWindowExW(
+                0,
+                WC_COMBOBOXW,
+                L"",
+                WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST,
+                0,
+                0,
+                0,
+                0,
+                hwnd,
+                (HMENU)(INT_PTR)APP_ID_CLAW_TYPE,
+                create->hInstance,
+                NULL);
+            SendMessageW(g_app.clawTypeComboBox, WM_SETFONT, (WPARAM)UiGetPrimaryFont(), FALSE);
+            SendMessageW(g_app.clawTypeComboBox, CB_ADDSTRING, 0, (LPARAM)UiTextOrFallback(g_app.text.clawTypeAll, L"All Claw types"));
+            SendMessageW(g_app.clawTypeComboBox, CB_ADDSTRING, 0, (LPARAM)L"OpenClaw");
+            SendMessageW(g_app.clawTypeComboBox, CB_ADDSTRING, 0, (LPARAM)L"LobsterAI");
+            SendMessageW(g_app.clawTypeComboBox, CB_ADDSTRING, 0, (LPARAM)L"EasyClaw");
+            SendMessageW(g_app.clawTypeComboBox, CB_ADDSTRING, 0, (LPARAM)L"AutoClaw");
+            SendMessageW(g_app.clawTypeComboBox, CB_SETCURSEL, 0, 0);
+
+            g_app.fsWhiteListEdit = CreateWindowExW(
+                WS_EX_CLIENTEDGE,
+                WC_EDITW,
+                L"",
+                WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL,
+                0,
+                0,
+                0,
+                0,
+                hwnd,
+                (HMENU)(INT_PTR)APP_ID_FS_WHITELIST,
+                create->hInstance,
+                NULL);
+            SendMessageW(g_app.fsWhiteListEdit, WM_SETFONT, (WPARAM)UiGetPrimaryFont(), FALSE);
+            SendMessageW(g_app.fsWhiteListEdit, EM_SETCUEBANNER, TRUE, (LPARAM)UiTextOrFallback(g_app.text.fsWhiteListPlaceholder, L"FS whitelist, separated by ;"));
+
+            g_app.browseFolderButton = CreateWindowExW(
+                0,
+                WC_BUTTONW,
+                UiTextOrFallback(g_app.text.browseFolder, L"Browse..."),
+                WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
+                0,
+                0,
+                0,
+                0,
+                hwnd,
+                (HMENU)(INT_PTR)APP_ID_BROWSE_FOLDER,
+                create->hInstance,
+                NULL);
+            SendMessageW(g_app.browseFolderButton, WM_SETFONT, (WPARAM)UiGetPrimaryFont(), FALSE);
+
+            g_app.applyOptionsButton = CreateWindowExW(
+                0,
+                WC_BUTTONW,
+                UiTextOrFallback(g_app.text.applyOptions, L"Apply options"),
+                WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
+                0,
+                0,
+                0,
+                0,
+                hwnd,
+                (HMENU)(INT_PTR)APP_ID_APPLY_OPTIONS,
+                create->hInstance,
+                NULL);
+            SendMessageW(g_app.applyOptionsButton, WM_SETFONT, (WPARAM)UiGetPrimaryFont(), FALSE);
+
             g_app.projectLink = CreateWindowExW(
                 0,
                 WC_LINK,
@@ -741,6 +1035,14 @@ static LRESULT CALLBACK UiWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPA
             {
                 UiHandleTrackedProcesses(hwnd);
             }
+            if (HIWORD(wParam) == BN_CLICKED && LOWORD(wParam) == APP_ID_APPLY_OPTIONS)
+            {
+                UiHandleApplyOptions(hwnd);
+            }
+            if (HIWORD(wParam) == BN_CLICKED && LOWORD(wParam) == APP_ID_BROWSE_FOLDER)
+            {
+                UiHandleBrowseFolder(hwnd);
+            }
             return 0;
 
         case WM_NOTIFY:
@@ -794,6 +1096,11 @@ static LRESULT CALLBACK UiWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPA
             g_app.hwnd = NULL;
             g_app.toggleButton = NULL;
             g_app.trackedButton = NULL;
+            g_app.selfProtectionCheckBox = NULL;
+            g_app.clawTypeComboBox = NULL;
+            g_app.fsWhiteListEdit = NULL;
+            g_app.browseFolderButton = NULL;
+            g_app.applyOptionsButton = NULL;
             g_app.projectLink = NULL;
             PostQuitMessage(0);
             return 0;

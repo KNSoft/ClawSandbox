@@ -95,6 +95,13 @@ BEGIN
     IDS_ACTION_QUERY_MANAGED_PROCESSES "Query managed processes"
     IDS_NO_MANAGED_PROCESS  "No managed process."
     IDS_PATH_UNAVAILABLE    "<path unavailable>"
+    IDS_SELF_PROTECTION     "Self protection"
+    IDS_CLAW_TYPE_ALL       "All Claw types"
+    IDS_FS_WHITELIST_PLACEHOLDER "FS whitelist, separated by ;"
+    IDS_APPLY_OPTIONS       "Apply options"
+    IDS_ACTION_APPLY_OPTIONS "Apply options"
+    IDS_BROWSE_FOLDER       "Browse..."
+    IDS_ACTION_BROWSE_FOLDER "Browse folder"
 END
 
 #endif    // Neutral (Default) resources
@@ -146,6 +153,13 @@ BEGIN
     IDS_ACTION_QUERY_MANAGED_PROCESSES "查询被管控进程"
     IDS_NO_MANAGED_PROCESS  "当前没有被管控的进程。"
     IDS_PATH_UNAVAILABLE    "<路径不可用>"
+    IDS_SELF_PROTECTION     "自保护"
+    IDS_CLAW_TYPE_ALL       "全部 Claw 类型"
+    IDS_FS_WHITELIST_PLACEHOLDER "文件白名单，使用 ; 分隔"
+    IDS_APPLY_OPTIONS       "应用选项"
+    IDS_ACTION_APPLY_OPTIONS "应用选项"
+    IDS_BROWSE_FOLDER       "选择..."
+    IDS_ACTION_BROWSE_FOLDER "选择文件夹"
 END
 
 #endif    // Chinese (Simplified, China) resources

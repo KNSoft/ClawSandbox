@@ -108,6 +108,10 @@ RuleGetTrackedProcessClawType(
 BOOLEAN
 RuleHasTrackedProcess(VOID);
 
+BOOLEAN
+RuleIsClawTypeAllowed(
+    _In_ PRULE_CLAW_TYPE ClawType);
+
 NTSTATUS
 RuleCopyTrackedProcessIds(
     _Out_writes_to_opt_(Capacity, *Count) PULONG_PTR ProcessIds,

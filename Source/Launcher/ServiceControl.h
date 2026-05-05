@@ -26,6 +26,9 @@ DWORD ServiceControlEnsureInstalledOnStartup(BOOL* installedByLauncher, wchar_t*
 DWORD ServiceControlStart(wchar_t* errorMessage, size_t errorMessageCount);
 DWORD ServiceControlStop(wchar_t* errorMessage, size_t errorMessageCount);
 DWORD ServiceControlUninstall(wchar_t* errorMessage, size_t errorMessageCount);
+DWORD ServiceControlSetSelfProtection(BOOL enabled, wchar_t* errorMessage, size_t errorMessageCount);
+DWORD ServiceControlSetFsWhiteList(const wchar_t* fsWhiteListMultiSz, wchar_t* errorMessage, size_t errorMessageCount);
+DWORD ServiceControlSetClawType(const wchar_t* clawType, wchar_t* errorMessage, size_t errorMessageCount);
 DWORD ServiceControlCleanupOnExit(BOOL installedByLauncher, wchar_t* errorMessage, size_t errorMessageCount);
 
 #ifdef __cplusplus

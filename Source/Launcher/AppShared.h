@@ -29,7 +29,12 @@ enum
     APP_BASE_DISPLAY_IMAGE_SIZE = 256,
     APP_ID_TOGGLE_DRIVER = 1001,
     APP_ID_TRACKED_PROCESSES = 1002,
-    APP_ID_PROJECT_LINK = 1003
+    APP_ID_PROJECT_LINK = 1003,
+    APP_ID_SELF_PROTECTION = 1004,
+    APP_ID_CLAW_TYPE = 1005,
+    APP_ID_FS_WHITELIST = 1006,
+    APP_ID_APPLY_OPTIONS = 1007,
+    APP_ID_BROWSE_FOLDER = 1008
 };
 
 typedef struct AppImage AppImage;
@@ -64,6 +69,13 @@ typedef struct LocalizedStrings
     WCHAR* actionQueryManagedProcesses;
     WCHAR* noManagedProcess;
     WCHAR* pathUnavailable;
+    WCHAR* selfProtection;
+    WCHAR* clawTypeAll;
+    WCHAR* fsWhiteListPlaceholder;
+    WCHAR* applyOptions;
+    WCHAR* actionApplyOptions;
+    WCHAR* browseFolder;
+    WCHAR* actionBrowseFolder;
 } LocalizedStrings;
 
 typedef struct AppState
@@ -71,6 +83,11 @@ typedef struct AppState
     HWND hwnd;
     HWND toggleButton;
     HWND trackedButton;
+    HWND selfProtectionCheckBox;
+    HWND clawTypeComboBox;
+    HWND fsWhiteListEdit;
+    HWND browseFolderButton;
+    HWND applyOptionsButton;
     HWND projectLink;
     HANDLE singleInstanceMutex;
     BOOL trayIconVisible;

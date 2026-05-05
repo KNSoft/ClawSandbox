@@ -123,6 +123,13 @@ void AppFreeLocalizedStrings(void)
     AppFreeString(&g_app.text.actionQueryManagedProcesses);
     AppFreeString(&g_app.text.noManagedProcess);
     AppFreeString(&g_app.text.pathUnavailable);
+    AppFreeString(&g_app.text.selfProtection);
+    AppFreeString(&g_app.text.clawTypeAll);
+    AppFreeString(&g_app.text.fsWhiteListPlaceholder);
+    AppFreeString(&g_app.text.applyOptions);
+    AppFreeString(&g_app.text.actionApplyOptions);
+    AppFreeString(&g_app.text.browseFolder);
+    AppFreeString(&g_app.text.actionBrowseFolder);
 }
 
 void AppLoadLocalizedStrings(HINSTANCE instance)
@@ -155,6 +162,13 @@ void AppLoadLocalizedStrings(HINSTANCE instance)
     AppLoadLocalizedString(&g_app.text.actionQueryManagedProcesses, instance, IDS_ACTION_QUERY_MANAGED_PROCESSES);
     AppLoadLocalizedString(&g_app.text.noManagedProcess, instance, IDS_NO_MANAGED_PROCESS);
     AppLoadLocalizedString(&g_app.text.pathUnavailable, instance, IDS_PATH_UNAVAILABLE);
+    AppLoadLocalizedString(&g_app.text.selfProtection, instance, IDS_SELF_PROTECTION);
+    AppLoadLocalizedString(&g_app.text.clawTypeAll, instance, IDS_CLAW_TYPE_ALL);
+    AppLoadLocalizedString(&g_app.text.fsWhiteListPlaceholder, instance, IDS_FS_WHITELIST_PLACEHOLDER);
+    AppLoadLocalizedString(&g_app.text.applyOptions, instance, IDS_APPLY_OPTIONS);
+    AppLoadLocalizedString(&g_app.text.actionApplyOptions, instance, IDS_ACTION_APPLY_OPTIONS);
+    AppLoadLocalizedString(&g_app.text.browseFolder, instance, IDS_BROWSE_FOLDER);
+    AppLoadLocalizedString(&g_app.text.actionBrowseFolder, instance, IDS_ACTION_BROWSE_FOLDER);
 }
 
 HFONT AppGetFallbackUiFont(void)
