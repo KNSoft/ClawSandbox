@@ -324,7 +324,7 @@ static BOOL ConfigureServiceRegistry(WCHAR* errorMessage, size_t errorMessageCou
     WCHAR instancesKey[256];
     WCHAR defaultInstanceKey[256];
     const WCHAR serviceRoot[] = L"SYSTEM\\CurrentControlSet\\Services\\ClawSandbox";
-    const WCHAR parametersKey[] = L"SYSTEM\\CurrentControlSet\\Services\\ClawSandbox\\Parameters";
+    const WCHAR parametersKey[] = L"SYSTEM\\CurrentControlSet\\Services\\ClawSandbox\\Parameters\\ClawSandbox";
 
     StringCchPrintfW(instancesKey, ARRAYSIZE(instancesKey), L"%s\\Parameters\\Instances", serviceRoot);
     StringCchPrintfW(defaultInstanceKey, ARRAYSIZE(defaultInstanceKey), L"%s\\%s", instancesKey, kDefaultInstance);
@@ -582,7 +582,7 @@ DWORD ClawSandboxInstallService(WCHAR* errorMessage, size_t errorMessageCount)
 DWORD ClawSandboxSetOptions(const CLAWSANDBOX_OPTIONS* options, WCHAR* errorMessage, size_t errorMessageCount)
 {
     CLAWSANDBOX_SERVICE_STATE state;
-    const WCHAR parametersKey[] = L"SYSTEM\\CurrentControlSet\\Services\\ClawSandbox\\Parameters";
+    const WCHAR parametersKey[] = L"SYSTEM\\CurrentControlSet\\Services\\ClawSandbox\\Parameters\\ClawSandbox";
     const DWORD supportedFlags = CLAWSANDBOX_OPTION_SELF_PROTECTION |
                                  CLAWSANDBOX_OPTION_FS_WHITE_LIST |
                                  CLAWSANDBOX_OPTION_CLAW_TYPE;

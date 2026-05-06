@@ -168,7 +168,7 @@ RuleUntrackProcess(
 
 static UNICODE_STRING SystemRoot = RTL_CONSTANT_STRING(L"\\SystemRoot");
 static OBJECT_ATTRIBUTES Attributes = RTL_CONSTANT_OBJECT_ATTRIBUTES(&SystemRoot, OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE);
-static CONST UNICODE_STRING ParametersSubKey = RTL_CONSTANT_STRING(L"\\Parameters");
+static CONST UNICODE_STRING ParametersSubKey = RTL_CONSTANT_STRING(L"\\Parameters\\ClawSandbox");
 static CONST UNICODE_STRING FsWhiteListValueName = RTL_CONSTANT_STRING(L"FSWhiteList");
 static CONST UNICODE_STRING SelfProtectionValueName = RTL_CONSTANT_STRING(L"SelfProtection");
 static CONST UNICODE_STRING ClawTypeValueName = RTL_CONSTANT_STRING(L"ClawType");
