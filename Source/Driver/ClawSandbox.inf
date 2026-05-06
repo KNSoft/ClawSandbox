@@ -49,7 +49,6 @@ LoadOrderGroup = "FSFilter Activity Monitor"
 AddReg         = ClawSandbox.AddRegistry
 
 [ClawSandbox.AddRegistry]
-HKR,"Parameters","SupportedFeatures",0x00010001,0x3
 HKR,"Parameters","SelfProtection",0x00010001,0x0
 HKR,"Parameters\Instances","DefaultInstance",0x00000000,%DefaultInstance%
 HKR,"Parameters\Instances\"%DefaultInstance%,"Altitude",0x00000000,%DefaultAltitude%
