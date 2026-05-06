@@ -41,6 +41,6 @@ ClawSandbox 是一个**内核级安全沙箱**，防止 OpenClaw 意外地破坏
 沙箱启动后，OpenClaw已无法删除工作目录外的文件 (D:\1.txt)：
 ![Demo](./Assets/ClawSandbox.Demo.1.png)
 
-## 海报与官方群聊
+## 海报
 
 ![Poster](./Assets/Poster.zh-CN.png)

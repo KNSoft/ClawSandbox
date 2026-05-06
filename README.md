@@ -41,6 +41,6 @@ Official site: https://knsoft.org/ClawSandbox/
 After the sandbox starts, OpenClaw can no longer delete files outside the working directory (D:\1.txt):
 ![Demo](./Assets/ClawSandbox.Demo.1.png)
 
-## Poster and official group chat
+## Poster
 
 ![Poster](./Assets/Poster.png)
